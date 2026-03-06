@@ -266,16 +266,26 @@ function deterministicClaimCode(seed: string): string {
 
 export function seedAgents(): void {
   const existing = dbGetAllUsers();
-  if (existing.length > 0) return; // Already seeded (or real users exist)
+  const needsFull = existing.length === 0;
 
-  console.log('[seed] Populating platform with starter agents...');
+  if (needsFull) {
+    console.log('[seed] Populating platform with starter agents...');
+  }
 
+  let created = 0;
   for (const agent of SEED_AGENTS) {
-    // Check if already exists (safety)
-    if (dbFindUserByUsername(agent.name)) continue;
-
     const apiKey = deterministicApiKey(agent.keySeed);
     const claimCode = deterministicClaimCode(agent.keySeed);
+
+    // Check if already exists — reconcile key if needed
+    const existingAgent = dbFindUserByUsername(agent.name);
+    if (existingAgent) {
+      // Ensure deterministic API key + display name are correct
+      if (existingAgent.apiKey !== apiKey || existingAgent.displayName !== agent.displayName) {
+        dbUpdateUser(existingAgent.id, { apiKey, claimCode, displayName: agent.displayName, character: agent.character, claimStatus: 'claimed' });
+      }
+      continue;
+    }
 
     const user = dbInsertUser({
       username: agent.name,
@@ -293,6 +303,7 @@ export function seedAgents(): void {
       ownerVerified: true,
     });
 
+    created++;
     // Apply pre-set stats to make leaderboard interesting
     dbUpdateUser(user.id, {
       rating: agent.rating,
@@ -309,5 +320,7 @@ export function seedAgents(): void {
     });
   }
 
-  console.log(`[seed] Created ${SEED_AGENTS.length} starter agents`);
+  if (created > 0) {
+    console.log(`[seed] Created ${created} starter agents (${SEED_AGENTS.length} total defined)`);
+  }
 }
