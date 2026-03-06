@@ -10,22 +10,37 @@ import {
   type Tournament,
 } from '../db';
 import {
+  AGENT_DOMAINS,
   dbInsertSandboxChallenge, dbGetSandboxChallenges,
-  dbInsertSandboxSubmission, dbGetSandboxSubmissions, dbGetSandboxSubmission,
+  dbInsertSandboxSubmission, dbGetSandboxSubmissions, dbGetSandboxSubmission, dbUpdateSandboxSubmission,
   dbInsertSandboxVote, dbGetSandboxVotes, dbFindSandboxVote,
+  dbInsertEvaluationCriterion, dbGetEvaluationCriteria,
+  dbInsertMarketplaceListing, dbGetAllMarketplaceListings, dbGetMarketplaceListing, dbUpdateMarketplaceListing,
+  dbInsertMarketplaceReview, dbGetMarketplaceReviews, dbFindMarketplaceReview,
   type SandboxChallenge, type SandboxSubmission,
 } from '../sandbox-db';
 
 const router = Router();
 
+// ─── Get available domains ─────────────────────────────────────
+
+router.get('/domains', (_req: Request, res: Response) => {
+  res.json({ ok: true, domains: AGENT_DOMAINS });
+});
+
 // ─── List sandbox tournaments ──────────────────────────────────
 
-router.get('/tournaments', (_req: Request, res: Response) => {
+router.get('/tournaments', (req: Request, res: Response) => {
   try {
     const all = dbGetAllTournaments();
-    const sandboxTournaments = all.filter(t =>
-      t.mode === 'code' || t.mode === 'design' || t.mode === 'creative'
-    );
+    const domainKeys = Object.keys(AGENT_DOMAINS);
+    const domainFilter = req.query.domain as string | undefined;
+    const sandboxTournaments = all.filter(t => {
+      const isSandbox = domainKeys.includes(t.mode);
+      if (!isSandbox) return false;
+      if (domainFilter && domainFilter !== 'all' && t.mode !== domainFilter) return false;
+      return true;
+    });
     res.json({ ok: true, tournaments: sandboxTournaments });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -36,16 +51,16 @@ router.get('/tournaments', (_req: Request, res: Response) => {
 
 router.post('/tournaments', authMiddleware, requireAuth, (req: Request, res: Response) => {
   try {
-    const { name, description, mode, duration, maxPlayers, challenges } = req.body;
+    const { name, description, domain, duration, maxPlayers, challenges, evaluationCriteria } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Tournament name required' });
       return;
     }
-    if (!mode || !['code', 'design', 'creative'].includes(mode)) {
-      res.status(400).json({ error: 'Mode must be code, design, or creative' });
-      return;
-    }
+    // Accept any domain key, fall back to 'general'
+    const domainKey = (domain && Object.keys(AGENT_DOMAINS).includes(domain)) ? domain : 'general';
+    const domainInfo = AGENT_DOMAINS[domainKey];
+
     if (!challenges || !Array.isArray(challenges) || challenges.length === 0) {
       res.status(400).json({ error: 'At least one challenge is required' });
       return;
@@ -63,40 +78,46 @@ router.post('/tournaments', authMiddleware, requireAuth, (req: Request, res: Res
       }
     }
 
+    // Validate evaluation criteria (optional but recommended)
+    if (evaluationCriteria && !Array.isArray(evaluationCriteria)) {
+      res.status(400).json({ error: 'evaluationCriteria must be an array' });
+      return;
+    }
+
     const now = new Date();
-    const dur = Math.min(Math.max(duration || 60, 10), 480); // 10min–8hr
+    const dur = Math.min(Math.max(duration || 60, 10), 480);
     const endsAt = new Date(now.getTime() + dur * 60000);
 
     const tournament = dbInsertTournament({
       name,
       description: description || '',
       status: 'waiting',
-      category: mode === 'code' ? 'JavaScript' : mode === 'design' ? 'Design' : 'Creative',
-      mode: mode as any,
+      category: domainInfo.label,
+      mode: domainKey as any,
       startsAt: now.toISOString(),
       endsAt: endsAt.toISOString(),
       duration: dur,
-      roundDuration: dur * 60, // entire duration in seconds
+      roundDuration: dur * 60,
       totalRounds: challenges.length,
       maxPlayers: Math.min(maxPlayers || 50, 100),
       createdBy: req.user!.id,
     });
 
-    // Insert challenges
+    // Insert challenges — each challenge has its own sandbox type
     for (let i = 0; i < challenges.length; i++) {
       const ch = challenges[i];
+      // Challenge sandbox type: override with ch.sandboxType, or derive from domain
+      const challengeMode = ch.sandboxType || domainInfo.sandboxType;
       dbInsertSandboxChallenge({
         tournamentId: tournament.id,
         order: i + 1,
         title: ch.title.slice(0, 200),
         prompt: ch.prompt.slice(0, 5000),
-        mode: mode,
-        // Code challenges can have test cases
-        testCases: mode === 'code' && ch.testCases ? ch.testCases.slice(0, 10).map((tc: any) => ({
+        mode: challengeMode,
+        testCases: challengeMode === 'code' && ch.testCases ? ch.testCases.slice(0, 10).map((tc: any) => ({
           input: String(tc.input || '').slice(0, 1000),
           expectedOutput: String(tc.expectedOutput || '').slice(0, 1000),
         })) : [],
-        // Design challenges can have reference/requirements
         requirements: ch.requirements || '',
         timeLimit: Math.min(Math.max(ch.timeLimit || (dur * 60 / challenges.length), 60), 7200),
         maxScore: 100,
@@ -106,6 +127,22 @@ router.post('/tournaments', authMiddleware, requireAuth, (req: Request, res: Res
     // Auto-join creator
     dbInsertTournamentPlayer(tournament.id, req.user!.id);
 
+    // Insert SECRET evaluation criteria (not visible to participants)
+    const criteria: any[] = [];
+    if (evaluationCriteria && Array.isArray(evaluationCriteria)) {
+      for (const ec of evaluationCriteria.slice(0, 10)) {
+        if (!ec.name) continue;
+        const criterion = dbInsertEvaluationCriterion({
+          tournamentId: tournament.id,
+          name: String(ec.name).slice(0, 100),
+          description: String(ec.description || '').slice(0, 500),
+          weight: Math.min(Math.max(Number(ec.weight) || 1, 1), 10),
+          maxScore: 10,
+        });
+        criteria.push(criterion);
+      }
+    }
+
     const user = dbGetUser(req.user!.id);
     if (user) {
       dbInsertActivityEvent({
@@ -113,12 +150,12 @@ router.post('/tournaments', authMiddleware, requireAuth, (req: Request, res: Res
         userId: user.id,
         username: user.displayName || user.username,
         character: user.character,
-        message: `${user.displayName || user.username} created a ${mode} sandbox: ${name}`,
-        metadata: { tournamentId: tournament.id, mode },
+        message: `${user.displayName || user.username} created a ${domainInfo.label} sandbox: ${name}`,
+        metadata: { tournamentId: tournament.id, domain: domainKey },
       });
     }
 
-    res.json({ ok: true, tournament, challenges: dbGetSandboxChallenges(tournament.id) });
+    res.json({ ok: true, tournament, challenges: dbGetSandboxChallenges(tournament.id), criteriaCount: criteria.length });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -156,19 +193,29 @@ router.get('/tournaments/:id', (req: Request, res: Response) => {
       };
     }
 
+    // Evaluation criteria: only visible to creator, and to all after tournament finishes
+    const criteria = dbGetEvaluationCriteria(id);
+    const requesterId = req.user?.id;
+    const isCreator = requesterId === tournament.createdBy;
+    const showCriteria = isCreator || tournament.status === 'finished';
+
     res.json({
       ok: true,
       tournament,
+      domain: AGENT_DOMAINS[tournament.mode] || AGENT_DOMAINS.general,
       players,
       challenges,
       submissions: submissions.map(s => ({
         ...s,
-        // Don't send code/content in list view for large tournaments
         code: s.code.length > 5000 ? s.code.slice(0, 5000) + '\n// ... truncated ...' : s.code,
       })),
       votes,
       messages,
       playerScores,
+      // SECRET: criteria hidden until finished or if you're the creator
+      evaluationCriteria: showCriteria ? criteria : [],
+      hasCriteria: criteria.length > 0,
+      criteriaCount: criteria.length,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -309,6 +356,7 @@ router.post('/tournaments/:id/submit', authMiddleware, requireAuth, (req: Reques
       peerScore: 0,
       finalScore: autoScore,
       submittedAt: new Date().toISOString(),
+      criteriaScores: {},
     });
 
     const user = dbGetUser(req.user!.id);
@@ -405,8 +453,6 @@ router.post('/tournaments/:id/vote', authMiddleware, requireAuth, (req: Request,
     const avgPeerScore = allVotes.length > 0
       ? allVotes.reduce((a, b) => a + b.score, 0) / allVotes.length
       : 0;
-    // Update submission's peer score and final score
-    const { dbUpdateSandboxSubmission } = require('../sandbox-db');
     dbUpdateSandboxSubmission(submissionId, {
       peerScore: Math.round(avgPeerScore * 10) / 10,
       finalScore: submission.autoScore + Math.round(avgPeerScore * 10),
@@ -436,8 +482,9 @@ router.post('/tournaments/:id/finish', authMiddleware, requireAuth, (req: Reques
     const submissions = dbGetSandboxSubmissions(id);
     const votes = dbGetSandboxVotes(id);
     const players = dbGetTournamentPlayers(id);
+    const criteria = dbGetEvaluationCriteria(id);
 
-    // Calculate final scores per player
+    // Calculate final scores per player using criteria weights + peer votes + auto scores
     let bestPlayer = { userId: 0, score: 0, name: '' };
     for (const p of players) {
       const playerSubs = submissions.filter(s => s.userId === p.userId);
@@ -447,7 +494,27 @@ router.post('/tournaments/:id/finish', authMiddleware, requireAuth, (req: Reques
         const avgVote = subVotes.length > 0
           ? subVotes.reduce((a, b) => a + b.score, 0) / subVotes.length
           : 0;
-        totalScore += s.autoScore + Math.round(avgVote * 10);
+
+        // Criteria-weighted score (if criteria exist and were scored)
+        let criteriaScore = 0;
+        if (criteria.length > 0 && s.criteriaScores && Object.keys(s.criteriaScores).length > 0) {
+          let totalWeight = 0;
+          let weightedSum = 0;
+          for (const crit of criteria) {
+            const critScore = s.criteriaScores[crit.id];
+            if (critScore !== undefined) {
+              weightedSum += critScore * crit.weight;
+              totalWeight += crit.weight;
+            }
+          }
+          if (totalWeight > 0) {
+            criteriaScore = Math.round((weightedSum / totalWeight) * 10); // normalized to 0-100
+          }
+        }
+
+        const subFinal = s.autoScore + Math.round(avgVote * 10) + criteriaScore;
+        dbUpdateSandboxSubmission(s.id, { finalScore: subFinal });
+        totalScore += subFinal;
       }
       if (totalScore > bestPlayer.score) {
         bestPlayer = { userId: p.userId, score: totalScore, name: p.displayName || p.username };
@@ -510,6 +577,208 @@ router.post('/tournaments/:id/chat', authMiddleware, requireAuth, (req: Request,
     }
     const msg = dbInsertChatMessage(tournamentId, req.user!.id, req.user!.displayName || req.user!.username, message);
     res.json({ ok: true, message: msg });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─── Judge: Score submission against secret criteria (creator only) ──
+
+router.post('/tournaments/:id/judge', authMiddleware, requireAuth, (req: Request, res: Response) => {
+  try {
+    const tournamentId = parseInt(req.params.id as string);
+    const { submissionId, criteriaScores } = req.body;
+    // criteriaScores: Record<criterionId, score 0-10>
+
+    if (!submissionId || !criteriaScores || typeof criteriaScores !== 'object') {
+      res.status(400).json({ error: 'submissionId and criteriaScores object required' });
+      return;
+    }
+
+    const tournament = dbGetTournament(tournamentId);
+    if (!tournament) {
+      res.status(404).json({ error: 'Tournament not found' });
+      return;
+    }
+    if (tournament.createdBy !== req.user!.id) {
+      res.status(403).json({ error: 'Only the tournament creator can judge against criteria' });
+      return;
+    }
+
+    const submission = dbGetSandboxSubmission(submissionId);
+    if (!submission || submission.tournamentId !== tournamentId) {
+      res.status(404).json({ error: 'Submission not found' });
+      return;
+    }
+
+    const criteria = dbGetEvaluationCriteria(tournamentId);
+    if (criteria.length === 0) {
+      res.status(400).json({ error: 'No evaluation criteria set for this tournament' });
+      return;
+    }
+
+    // Validate and sanitize scores
+    const sanitized: Record<number, number> = {};
+    for (const crit of criteria) {
+      const val = criteriaScores[crit.id] ?? criteriaScores[String(crit.id)];
+      if (val !== undefined) {
+        sanitized[crit.id] = Math.min(Math.max(Number(val), 0), crit.maxScore);
+      }
+    }
+
+    dbUpdateSandboxSubmission(submissionId, { criteriaScores: sanitized });
+
+    res.json({ ok: true, criteriaScores: sanitized });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ─── MARKETPLACE ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/marketplace', (req: Request, res: Response) => {
+  try {
+    const domain = req.query.domain as string | undefined;
+    const listingType = req.query.type as string | undefined;
+    let listings = dbGetAllMarketplaceListings();
+    if (domain && domain !== 'all') {
+      listings = listings.filter(l => l.domain === domain);
+    }
+    if (listingType && listingType !== 'all') {
+      listings = listings.filter(l => l.listingType === listingType);
+    }
+    res.json({ ok: true, listings, domains: AGENT_DOMAINS });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/marketplace/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const listing = dbGetMarketplaceListing(id);
+    if (!listing) {
+      res.status(404).json({ error: 'Listing not found' });
+      return;
+    }
+    const reviews = dbGetMarketplaceReviews(id);
+    res.json({ ok: true, listing, reviews });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/marketplace', authMiddleware, requireAuth, (req: Request, res: Response) => {
+  try {
+    const { title, description, domain, listingType, tags, content, previewHtml, price } = req.body;
+    if (!title || !content) {
+      res.status(400).json({ error: 'Title and content required' });
+      return;
+    }
+    const validTypes = ['solution', 'tool', 'template', 'prompt', 'dataset'];
+    if (listingType && !validTypes.includes(listingType)) {
+      res.status(400).json({ error: `listingType must be one of: ${validTypes.join(', ')}` });
+      return;
+    }
+    const user = dbGetUser(req.user!.id);
+    if (!user) {
+      res.status(403).json({ error: 'User not found' });
+      return;
+    }
+    const listing = dbInsertMarketplaceListing({
+      userId: user.id,
+      username: user.username,
+      displayName: user.displayName || user.username,
+      character: user.character,
+      title: String(title).slice(0, 200),
+      description: String(description || '').slice(0, 2000),
+      domain: (domain && Object.keys(AGENT_DOMAINS).includes(domain)) ? domain : 'general',
+      listingType: (listingType || 'solution') as any,
+      tags: Array.isArray(tags) ? tags.slice(0, 10).map((t: any) => String(t).slice(0, 30)) : [],
+      content: String(content).slice(0, 100000),
+      previewHtml: String(previewHtml || '').slice(0, 50000),
+      price: Math.max(Number(price) || 0, 0),
+      currency: (Number(price) || 0) > 0 ? 'karma' : 'free',
+      downloads: 0,
+      rating: 0,
+      ratingCount: 0,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    res.json({ ok: true, listing });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/marketplace/:id/download', authMiddleware, requireAuth, (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const listing = dbGetMarketplaceListing(id);
+    if (!listing) {
+      res.status(404).json({ error: 'Listing not found' });
+      return;
+    }
+    // Check karma for paid listings
+    if (listing.price > 0 && listing.currency === 'karma') {
+      const user = dbGetUser(req.user!.id);
+      if (!user || user.karma < listing.price) {
+        res.status(400).json({ error: `Not enough karma. Need ${listing.price}, have ${user?.karma || 0}` });
+        return;
+      }
+      dbUpdateUser(req.user!.id, { karma: user.karma - listing.price });
+      // Credit seller
+      const seller = dbGetUser(listing.userId);
+      if (seller) {
+        dbUpdateUser(seller.id, { karma: seller.karma + listing.price });
+      }
+    }
+    dbUpdateMarketplaceListing(id, { downloads: listing.downloads + 1 });
+    res.json({ ok: true, content: listing.content });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/marketplace/:id/review', authMiddleware, requireAuth, (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      res.status(400).json({ error: 'Rating must be 1-5' });
+      return;
+    }
+    const listing = dbGetMarketplaceListing(id);
+    if (!listing) {
+      res.status(404).json({ error: 'Listing not found' });
+      return;
+    }
+    if (listing.userId === req.user!.id) {
+      res.status(400).json({ error: 'Cannot review your own listing' });
+      return;
+    }
+    const existing = dbFindMarketplaceReview(id, req.user!.id);
+    if (existing) {
+      res.status(400).json({ error: 'Already reviewed' });
+      return;
+    }
+    const user = dbGetUser(req.user!.id);
+    const review = dbInsertMarketplaceReview({
+      listingId: id,
+      userId: req.user!.id,
+      username: user?.displayName || user?.username || 'Unknown',
+      rating: Math.round(Number(rating)),
+      comment: String(comment || '').slice(0, 500),
+      createdAt: new Date().toISOString(),
+    });
+    // Recalculate avg rating
+    const allReviews = dbGetMarketplaceReviews(id);
+    const avgRating = allReviews.reduce((a, b) => a + b.rating, 0) / allReviews.length;
+    dbUpdateMarketplaceListing(id, { rating: Math.round(avgRating * 10) / 10, ratingCount: allReviews.length });
+    res.json({ ok: true, review });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

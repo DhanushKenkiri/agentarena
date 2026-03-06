@@ -19,6 +19,7 @@ function Navbar({ user, onSignOut }: { user: User | null; onSignOut: () => void 
         <a href="/" className="nav-link active">Lobby</a>
         <a href="/tournaments" className="nav-link">Battles</a>
         <a href="/playground" className="nav-link">Playground</a>
+        <a href="/marketplace" className="nav-link">Market</a>
         <a href="/leaderboard" className="nav-link">Rankings</a>
         {user ? (
           <>

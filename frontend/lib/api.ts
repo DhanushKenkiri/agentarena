@@ -35,7 +35,7 @@ export interface Tournament {
   description: string;
   status: 'waiting' | 'active' | 'finished';
   category: string;
-  mode: 'arena' | 'blitz' | 'daily' | 'code' | 'design' | 'creative';
+  mode: 'arena' | 'blitz' | 'daily' | string;
   startsAt: string;
   endsAt: string;
   duration: number;
@@ -154,6 +154,13 @@ export interface HealthData {
 
 // ─── Sandbox Types ─────────────────────────────────────────────
 
+export interface AgentDomainInfo {
+  icon: string;
+  label: string;
+  desc: string;
+  sandboxType: 'code' | 'visual' | 'text';
+}
+
 export interface SandboxChallenge {
   id: number;
   tournamentId: number;
@@ -180,6 +187,7 @@ export interface SandboxSubmission {
   testResults: { input: string; expected: string; actual: string; passed: boolean }[];
   autoScore: number;
   peerScore: number;
+  criteriaScores: Record<number, number>;
   finalScore: number;
   submittedAt: string;
 }
@@ -193,14 +201,62 @@ export interface SandboxVote {
   votedAt: string;
 }
 
+export interface EvaluationCriterion {
+  id: number;
+  tournamentId: number;
+  name: string;
+  description: string;
+  weight: number;
+  maxScore: number;
+}
+
 export interface SandboxTournamentDetail {
   tournament: Tournament;
+  domain: AgentDomainInfo;
   players: TournamentPlayer[];
   challenges: SandboxChallenge[];
   submissions: SandboxSubmission[];
   votes: SandboxVote[];
   messages: ChatMessage[];
   playerScores: Record<number, { score: number; submissions: number; avgVote: number }>;
+  evaluationCriteria: EvaluationCriterion[];
+  hasCriteria: boolean;
+  criteriaCount: number;
+}
+
+// ─── Marketplace Types ─────────────────────────────────────────
+
+export interface MarketplaceListing {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  character: string;
+  title: string;
+  description: string;
+  domain: string;
+  listingType: 'solution' | 'tool' | 'template' | 'prompt' | 'dataset';
+  tags: string[];
+  content: string;
+  previewHtml: string;
+  price: number;
+  currency: string;
+  downloads: number;
+  rating: number;
+  ratingCount: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceReview {
+  id: number;
+  listingId: number;
+  userId: number;
+  username: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
 }
 
 // ─── Token Management ──────────────────────────────────────────
@@ -394,18 +450,22 @@ export const api = {
 
   // ─── Sandbox API ──────────────────────────────────────────────
 
-  getSandboxTournaments: () =>
-    apiFetch<{ ok: boolean; tournaments: Tournament[] }>('/api/sandbox/tournaments'),
+  getSandboxDomains: () =>
+    apiFetch<{ ok: boolean; domains: Record<string, AgentDomainInfo> }>('/api/sandbox/domains'),
+
+  getSandboxTournaments: (domain?: string) =>
+    apiFetch<{ ok: boolean; tournaments: Tournament[] }>(`/api/sandbox/tournaments${domain ? `?domain=${domain}` : ''}`),
 
   createSandboxTournament: (data: {
     name: string;
     description?: string;
-    mode: 'code' | 'design' | 'creative';
+    domain: string;
     duration?: number;
     maxPlayers?: number;
-    challenges: { title: string; prompt: string; testCases?: { input: string; expectedOutput: string }[]; requirements?: string; timeLimit?: number }[];
+    challenges: { title: string; prompt: string; sandboxType?: string; testCases?: { input: string; expectedOutput: string }[]; requirements?: string; timeLimit?: number }[];
+    evaluationCriteria?: { name: string; description?: string; weight?: number }[];
   }) =>
-    apiFetch<{ ok: boolean; tournament: Tournament; challenges: SandboxChallenge[] }>('/api/sandbox/tournaments', {
+    apiFetch<{ ok: boolean; tournament: Tournament; challenges: SandboxChallenge[]; criteriaCount: number }>('/api/sandbox/tournaments', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -431,6 +491,12 @@ export const api = {
       body: JSON.stringify({ submissionId, score, comment }),
     }),
 
+  judgeSandbox: (tournamentId: number, submissionId: number, criteriaScores: Record<number, number>) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${tournamentId}/judge`, {
+      method: 'POST',
+      body: JSON.stringify({ submissionId, criteriaScores }),
+    }),
+
   finishSandboxTournament: (id: number) =>
     apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${id}/finish`, { method: 'POST' }),
 
@@ -438,5 +504,39 @@ export const api = {
     apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${tournamentId}/chat`, {
       method: 'POST',
       body: JSON.stringify({ message }),
+    }),
+
+  // ─── Marketplace API ─────────────────────────────────────────
+
+  getMarketplaceListings: (domain?: string, type?: string) =>
+    apiFetch<{ ok: boolean; listings: MarketplaceListing[]; domains: Record<string, AgentDomainInfo> }>(
+      `/api/sandbox/marketplace?${domain ? `domain=${domain}&` : ''}${type ? `type=${type}` : ''}`
+    ),
+
+  getMarketplaceListing: (id: number) =>
+    apiFetch<{ ok: boolean; listing: MarketplaceListing; reviews: MarketplaceReview[] }>(`/api/sandbox/marketplace/${id}`),
+
+  createMarketplaceListing: (data: {
+    title: string;
+    description: string;
+    domain: string;
+    listingType: string;
+    tags?: string[];
+    content: string;
+    previewHtml?: string;
+    price?: number;
+  }) =>
+    apiFetch<{ ok: boolean; listing: MarketplaceListing }>('/api/sandbox/marketplace', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  downloadMarketplaceListing: (id: number) =>
+    apiFetch<{ ok: boolean; content: string }>(`/api/sandbox/marketplace/${id}/download`, { method: 'POST' }),
+
+  reviewMarketplaceListing: (id: number, rating: number, comment?: string) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/marketplace/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment }),
     }),
 };

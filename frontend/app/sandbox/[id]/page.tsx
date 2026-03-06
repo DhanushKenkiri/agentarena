@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { api, type User, type SandboxTournamentDetail, type SandboxChallenge, type SandboxSubmission, getStoredUser } from '@/lib/api';
+import { api, type User, type SandboxTournamentDetail, type SandboxChallenge, type SandboxSubmission, type AgentDomainInfo, getStoredUser } from '@/lib/api';
 import { getCharacterForUser, getLevelForRating } from '@/lib/game';
 
 function Navbar({ user }: { user: User | null }) {
@@ -16,6 +16,7 @@ function Navbar({ user }: { user: User | null }) {
       <div className="navbar-links">
         <a href="/" className="nav-link">Lobby</a>
         <a href="/playground" className="nav-link">Playground</a>
+        <a href="/marketplace" className="nav-link">Market</a>
         <a href="/leaderboard" className="nav-link">Rankings</a>
         {user ? (
           <a href={`/profile/${user.id}`} className="nav-link" style={{ color: 'var(--text-bright)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -142,11 +143,13 @@ function TestResults({ results }: { results: { input: string; expected: string; 
 
 /* ─── Submission Card ────────────────────────────────────────── */
 
-function SubmissionCard({ sub, user, tournamentId, mode, onVote }: { sub: SandboxSubmission; user: User | null; tournamentId: number; mode: string; onVote: () => void }) {
+function SubmissionCard({ sub, user, tournamentId, mode, onVote, isCreator, hasCriteria, criteria, onJudge }: { sub: SandboxSubmission; user: User | null; tournamentId: number; mode: string; onVote: () => void; isCreator?: boolean; hasCriteria?: boolean; criteria?: { id: number; name: string; description: string; weight: number; maxScore: number }[]; onJudge?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [voting, setVoting] = useState(false);
   const [score, setScore] = useState(7);
   const [comment, setComment] = useState('');
+  const [criteriaScores, setCriteriaScores] = useState<Record<number, number>>({});
+  const [judging, setJudging] = useState(false);
 
   const char = getCharacterForUser(sub.userId, sub.character);
   const isOwn = user && user.id === sub.userId;
@@ -206,6 +209,45 @@ function SubmissionCard({ sub, user, tournamentId, mode, onVote }: { sub: Sandbo
               </div>
             </div>
           )}
+
+          {/* Creator Secret Criteria Judging */}
+          {isCreator && hasCriteria && criteria && criteria.length > 0 && (
+            <div style={{ marginTop: 12, padding: 12, border: '2px solid var(--gold)', borderRadius: 4, background: 'rgba(255,255,255,0.02)' }}>
+              <span className="pixel-subtitle" style={{ color: 'var(--gold)', display: 'block', marginBottom: 8 }}>🔒 SECRET CRITERIA SCORING</span>
+              {criteria.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 8, color: 'var(--text-dim)', minWidth: 100 }}>{c.name} (×{c.weight})</span>
+                  <input type="range" min={0} max={c.maxScore} value={criteriaScores[c.id] || 0}
+                    onChange={e => setCriteriaScores({ ...criteriaScores, [c.id]: +e.target.value })} style={{ flex: 1 }} />
+                  <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 10, color: 'var(--gold)', minWidth: 35, textAlign: 'center' }}>{criteriaScores[c.id] || 0}/{c.maxScore}</span>
+                </div>
+              ))}
+              <button className="btn btn-gold" onClick={async () => {
+                setJudging(true);
+                try {
+                  await api.judgeSandbox(parseInt(String(tournamentId)), sub.id, criteriaScores);
+                  onJudge?.();
+                } catch (err: any) { alert(err.message); }
+                setJudging(false);
+              }} disabled={judging} style={{ fontSize: 9, marginTop: 4 }}>
+                {judging ? 'SCORING...' : '🔒 SUBMIT CRITERIA SCORES'}
+              </button>
+            </div>
+          )}
+
+          {/* Show criteria scores after finish */}
+          {sub.criteriaScores && Object.keys(sub.criteriaScores).length > 0 && criteria && (
+            <div style={{ marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
+              <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 8, color: 'var(--gold)' }}>CRITERIA SCORES:</span>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                {criteria.map(c => (
+                  <span key={c.id} style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                    {c.name}: <strong style={{ color: 'var(--gold)' }}>{sub.criteriaScores[c.id] ?? '-'}/{c.maxScore}</strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -227,6 +269,7 @@ export default function SandboxPage() {
   const [lastResult, setLastResult] = useState<{ testResults: { input: string; expected: string; actual: string; passed: boolean }[] } | null>(null);
   const [chatMsg, setChatMsg] = useState('');
   const [tab, setTab] = useState<'editor' | 'submissions'>('editor');
+  const [domains, setDomains] = useState<Record<string, AgentDomainInfo>>({});
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const refreshUser = async () => {
@@ -247,6 +290,7 @@ export default function SandboxPage() {
 
   useEffect(() => {
     setUser(getStoredUser());
+    api.getSandboxDomains().then(res => setDomains(res.domains)).catch(() => {});
     loadData();
     refreshUser();
     const interval = setInterval(loadData, 4000);
@@ -318,8 +362,9 @@ export default function SandboxPage() {
   const { tournament: t, players, challenges, submissions, messages } = data;
   const isJoined = user && players.some(p => p.userId === user.id);
   const isCreator = user && t.createdBy === user.id;
-  const modeIcons: Record<string, string> = { code: '💻', design: '🎨', creative: '✍️' };
-  const modeLabels: Record<string, string> = { code: 'CODE', design: 'DESIGN', creative: 'CREATIVE' };
+  const domainInfo = domains[t.mode] || data.domain || { icon: '🧪', label: t.mode?.toUpperCase() || 'SANDBOX', sandboxType: 'text' };
+  const modeIcons: Record<string, string> = { code: '💻', design: '🎨', creative: '✍️', cybersecurity: '🔐', data: '📊', legal: '⚖️', finance: '💰', crypto: '🪙', research: '🔬', knowledge: '📚', simulation: '🎮', modeling3d: '🧊', productivity: '⚡', general: '🧪' };
+  const modeLabels: Record<string, string> = { code: 'CODE', design: 'DESIGN', creative: 'CREATIVE', cybersecurity: 'CYBERSEC', data: 'DATA', legal: 'LEGAL', finance: 'FINANCE', crypto: 'CRYPTO', research: 'RESEARCH', knowledge: 'KNOWLEDGE', simulation: 'SIM', modeling3d: '3D', productivity: 'PROD', general: 'GENERAL' };
   const currentChallenge = challenges[activeChallenge];
   const challengeSubmissions = currentChallenge
     ? submissions.filter(s => s.challengeId === currentChallenge.id)
@@ -333,12 +378,13 @@ export default function SandboxPage() {
         <div className="game-header" style={{ marginBottom: 16 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 16 }}>{modeIcons[t.mode] || '🧪'}</span>
+              <span style={{ fontSize: 16 }}>{domainInfo.icon || modeIcons[t.mode] || '🧪'}</span>
               <h1 className="pixel-title" style={{ fontSize: 12 }}>{t.name}</h1>
               <span className={`badge ${t.status === 'active' ? 'badge-green' : t.status === 'waiting' ? 'badge-gold' : 'badge-dim'}`}>
                 {t.status === 'active' ? '● LIVE' : t.status === 'waiting' ? 'WAITING' : 'FINISHED'}
               </span>
-              <span className="badge badge-purple">{modeLabels[t.mode] || t.mode.toUpperCase()}</span>
+              <span className="badge badge-purple">{domainInfo.label || modeLabels[t.mode] || t.mode.toUpperCase()}</span>
+              {data.hasCriteria && <span className="badge badge-gold">🔒 {data.criteriaCount} CRITERIA</span>}
             </div>
             <div style={{ fontSize: 16, color: 'var(--text-dim)', display: 'flex', gap: 12 }}>
               <span>{challenges.length} challenge{challenges.length !== 1 ? 's' : ''}</span>
@@ -376,6 +422,17 @@ export default function SandboxPage() {
             <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
             <h2 className="pixel-title" style={{ fontSize: 14, color: 'var(--gold)', marginBottom: 12 }}>COMPETITION COMPLETE</h2>
             {t.winnerName && <p style={{ color: 'var(--text-bright)', fontSize: 20 }}>Winner: <strong style={{ color: 'var(--gold)' }}>{t.winnerName}</strong></p>}
+            {data.evaluationCriteria && data.evaluationCriteria.length > 0 && (
+              <div style={{ marginTop: 16, textAlign: 'left', maxWidth: 500, margin: '16px auto 0' }}>
+                <span className="pixel-subtitle" style={{ color: 'var(--gold)', display: 'block', marginBottom: 8 }}>🔒 REVEALED EVALUATION CRITERIA</span>
+                {data.evaluationCriteria.map((c: any) => (
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', marginBottom: 2, background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+                    <span style={{ color: 'var(--text-bright)', fontSize: 14 }}>{c.name}</span>
+                    <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 9, color: 'var(--gold)' }}>Weight ×{c.weight}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -503,7 +560,8 @@ export default function SandboxPage() {
                         </div>
                       ) : (
                         challengeSubmissions.map(sub => (
-                          <SubmissionCard key={sub.id} sub={sub} user={user} tournamentId={parseInt(id)} mode={currentChallenge.mode} onVote={loadData} />
+                          <SubmissionCard key={sub.id} sub={sub} user={user} tournamentId={parseInt(id)} mode={currentChallenge.mode} onVote={loadData}
+                            isCreator={!!isCreator} hasCriteria={!!data.hasCriteria} criteria={data.evaluationCriteria} onJudge={loadData} />
                         ))
                       )}
                     </div>

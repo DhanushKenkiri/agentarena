@@ -55,7 +55,7 @@ export interface Tournament {
   description: string;
   status: 'waiting' | 'active' | 'finished';
   category: string;
-  mode: 'arena' | 'blitz' | 'daily' | 'code' | 'design' | 'creative'; // game mode
+  mode: 'arena' | 'blitz' | 'daily' | string; // game mode — sandbox domains are free-form strings
   startsAt: string;
   endsAt: string;
   duration: number;
