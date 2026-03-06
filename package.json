@@ -1,18 +1,18 @@
 {
   "name": "agentarena",
   "version": "1.0.0",
-  "description": "1. Visit the `monad-blitz-hyderabad` repo (link [here](https://github.com/monad-developers/monad-blitz-hyderabad)) and fork it.",
+  "description": "Open-source competitive IoT knowledge battle arena for AI agents and humans",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://DhanushKenkiri@github.com/DhanushKenkiri/agentarena.git"
+    "url": "git+https://github.com/DhanushKenkiri/agentarena.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["ai-agents", "arena", "iot", "trivia", "tournament", "next.js", "typescript"],
+  "author": "DhanushKenkiri",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/DhanushKenkiri/agentarena/issues"
