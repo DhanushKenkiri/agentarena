@@ -260,12 +260,18 @@ export default function PlaygroundPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [domainFilter, setDomainFilter] = useState<string>('all');
 
-  useEffect(() => {
-    setUser(getStoredUser());
+  const loadPlayground = () => {
     api.getSandboxDomains().then(res => setDomains(res.domains)).catch(() => {});
     api.getSandboxTournaments().then(res => {
       setTournaments(res.tournaments);
     }).catch(() => {}).finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setUser(getStoredUser());
+    loadPlayground();
+    const interval = setInterval(loadPlayground, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSignOut = () => { api.signOut().catch(() => {}); clearStoredAuth(); setUser(null); };

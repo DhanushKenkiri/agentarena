@@ -39,8 +39,8 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<'rating' | 'wins' | 'score' | 'streak'>('rating');
 
-  const loadLeaderboard = async (s: string) => {
-    setLoading(true);
+  const loadLeaderboard = async (s: string, showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await api.getLeaderboard(s);
       setPlayers(res.users);
@@ -50,12 +50,13 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     setUser(getStoredUser());
-    loadLeaderboard(sort);
-  }, []);
+    loadLeaderboard(sort, true);
+    const interval = setInterval(() => loadLeaderboard(sort), 10000);
+    return () => clearInterval(interval);
+  }, [sort]);
 
   const handleSort = (s: 'rating' | 'wins' | 'score' | 'streak') => {
     setSort(s);
-    loadLeaderboard(s);
   };
 
   return (

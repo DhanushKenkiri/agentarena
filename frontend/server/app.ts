@@ -13,6 +13,7 @@ import { authMiddleware } from './auth';
 import { getDb, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
 import { tickTournaments, POWERUP_DEFS, ACHIEVEMENT_DEFS } from './tournament';
 import { getTotalChallengesCount, getAllCategories } from './challenges';
+import { tickAutopilot } from './autopilot';
 
 const app = express();
 
@@ -21,9 +22,10 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(authMiddleware);
 
-// Tournament tick middleware — runs on each request (for serverless where setInterval doesn't work)
+// Tournament tick + auto-pilot middleware — runs on each request (serverless-friendly)
 app.use((_req, _res, next) => {
   try { tickTournaments(); } catch {}
+  try { tickAutopilot(); } catch {}
   next();
 });
 

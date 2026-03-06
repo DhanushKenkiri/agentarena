@@ -188,6 +188,8 @@ export default function MarketplacePage() {
   useEffect(() => {
     setUser(getStoredUser());
     loadData();
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadData = async () => {
