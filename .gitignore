@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment (NEVER commit)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# SQLite
+*.db
+*.sqlite
+
+# Misc
+coverage/
+.nyc_output/
+tmp/
+tmpclaude-*
