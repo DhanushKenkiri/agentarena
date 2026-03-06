@@ -35,7 +35,7 @@ export interface Tournament {
   description: string;
   status: 'waiting' | 'active' | 'finished';
   category: string;
-  mode: 'arena' | 'blitz' | 'daily';
+  mode: 'arena' | 'blitz' | 'daily' | 'code' | 'design' | 'creative';
   startsAt: string;
   endsAt: string;
   duration: number;
@@ -150,6 +150,57 @@ export interface HealthData {
     challengePool: number;
     categories: string[];
   };
+}
+
+// ─── Sandbox Types ─────────────────────────────────────────────
+
+export interface SandboxChallenge {
+  id: number;
+  tournamentId: number;
+  order: number;
+  title: string;
+  prompt: string;
+  mode: string;
+  testCases: { input: string; expectedOutput: string }[];
+  requirements: string;
+  timeLimit: number;
+  maxScore: number;
+}
+
+export interface SandboxSubmission {
+  id: number;
+  tournamentId: number;
+  challengeId: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  character: string;
+  code: string;
+  language: string;
+  testResults: { input: string; expected: string; actual: string; passed: boolean }[];
+  autoScore: number;
+  peerScore: number;
+  finalScore: number;
+  submittedAt: string;
+}
+
+export interface SandboxVote {
+  id: number;
+  submissionId: number;
+  voterId: number;
+  score: number;
+  comment: string;
+  votedAt: string;
+}
+
+export interface SandboxTournamentDetail {
+  tournament: Tournament;
+  players: TournamentPlayer[];
+  challenges: SandboxChallenge[];
+  submissions: SandboxSubmission[];
+  votes: SandboxVote[];
+  messages: ChatMessage[];
+  playerScores: Record<number, { score: number; submissions: number; avgVote: number }>;
 }
 
 // ─── Token Management ──────────────────────────────────────────
@@ -340,4 +391,52 @@ export const api = {
   // Agent leaderboard
   getAgentLeaderboard: (sort?: string, limit?: number) =>
     apiFetch<{ success: boolean; agents: any[] }>(`/api/v1/agents/leaderboard?sort=${sort || 'rating'}${limit ? `&limit=${limit}` : ''}`),
+
+  // ─── Sandbox API ──────────────────────────────────────────────
+
+  getSandboxTournaments: () =>
+    apiFetch<{ ok: boolean; tournaments: Tournament[] }>('/api/sandbox/tournaments'),
+
+  createSandboxTournament: (data: {
+    name: string;
+    description?: string;
+    mode: 'code' | 'design' | 'creative';
+    duration?: number;
+    maxPlayers?: number;
+    challenges: { title: string; prompt: string; testCases?: { input: string; expectedOutput: string }[]; requirements?: string; timeLimit?: number }[];
+  }) =>
+    apiFetch<{ ok: boolean; tournament: Tournament; challenges: SandboxChallenge[] }>('/api/sandbox/tournaments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getSandboxTournament: (id: number | string) =>
+    apiFetch<{ ok: boolean } & SandboxTournamentDetail>(`/api/sandbox/tournaments/${id}`),
+
+  joinSandboxTournament: (id: number) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${id}/join`, { method: 'POST' }),
+
+  startSandboxTournament: (id: number) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${id}/start`, { method: 'POST' }),
+
+  submitSandbox: (tournamentId: number, challengeId: number, code: string, language?: string) =>
+    apiFetch<{ ok: boolean; submission: SandboxSubmission; testResults: { input: string; expected: string; actual: string; passed: boolean }[] }>(`/api/sandbox/tournaments/${tournamentId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ challengeId, code, language }),
+    }),
+
+  voteSandbox: (tournamentId: number, submissionId: number, score: number, comment?: string) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${tournamentId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ submissionId, score, comment }),
+    }),
+
+  finishSandboxTournament: (id: number) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${id}/finish`, { method: 'POST' }),
+
+  sendSandboxChat: (tournamentId: number, message: string) =>
+    apiFetch<{ ok: boolean }>(`/api/sandbox/tournaments/${tournamentId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
 };

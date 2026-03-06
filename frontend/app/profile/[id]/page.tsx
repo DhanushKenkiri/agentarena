@@ -17,6 +17,7 @@ function Navbar({ user }: { user: User | null }) {
       <div className="navbar-links">
         <a href="/" className="nav-link">Lobby</a>
         <a href="/tournaments" className="nav-link">Battles</a>
+        <a href="/playground" className="nav-link">Playground</a>
         <a href="/leaderboard" className="nav-link">Rankings</a>
         {user ? (
           <a href={`/profile/${user.id}`} className="nav-link active" style={{ color: 'var(--text-bright)', display: 'flex', alignItems: 'center', gap: 6 }}>

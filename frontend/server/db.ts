@@ -55,7 +55,7 @@ export interface Tournament {
   description: string;
   status: 'waiting' | 'active' | 'finished';
   category: string;
-  mode: 'arena' | 'blitz' | 'daily'; // game mode
+  mode: 'arena' | 'blitz' | 'daily' | 'code' | 'design' | 'creative'; // game mode
   startsAt: string;
   endsAt: string;
   duration: number;

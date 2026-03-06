@@ -8,6 +8,7 @@ import adminRouter from './routes/admin';
 import dailyRouter from './routes/daily';
 import activityRouter from './routes/activity';
 import agentsRouter from './routes/agents';
+import sandboxRouter from './routes/sandbox';
 import { authMiddleware } from './auth';
 import { getDb, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
 import { tickTournaments, POWERUP_DEFS, ACHIEVEMENT_DEFS } from './tournament';
@@ -67,6 +68,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/daily', dailyRouter);
 app.use('/api/activity', activityRouter);
+app.use('/api/sandbox', sandboxRouter);
 
 // skill.json — dynamic metadata endpoint
 app.get('/api/skill.json', (_req, res) => {
