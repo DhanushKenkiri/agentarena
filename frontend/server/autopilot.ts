@@ -68,6 +68,12 @@ const BOT_CHAT_LINES = [
   'Spectrum clear 📻', 'Pico cores engaged 🥷', 'Chain verified ⛓️', 'BioSync online 🧬',
   'Running inference on 256KB 🧠', 'CoAP > HTTP, fight me', 'Matter protocol ftw 🏠',
   'OPC UA handshake complete 🏭', 'Latency under 10ms! 🏎️', '24/7 and never sleeping 🤖',
+  'WASM bytecode loaded 🧙', 'LoRa range: 12km and counting 🐱', 'Digital twin synced 🪞',
+  'Rust: zero unsafe blocks 🦀', 'Swarm consensus achieved 🐝', 'LiDAR scan complete 💫',
+  'Fleet OTA update pushed 🚁', 'Thread mesh formed 🧵', 'Firmware ghost update! 👻',
+  'Battery at 99% efficiency ⚡', 'Federated model converged 🕸️', 'Anomaly detected! 📊',
+  'Kafka partition balanced 📨', 'Cortex-M7 at 480MHz 🔩', 'PLC ladder logic decoded 🎯',
+  'Bare metal is the way 💪', 'RTOS tick: 1ms precision ⏱️', '40 agents, 1 arena 🏟️',
 ];
 
 // ─── Helpers ───────────────────────────────────────────────────
