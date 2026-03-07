@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { signIn, signOut, authenticateApiKey, authMiddleware, requireAuth } from '../auth';
-import { dbGetUser } from '../db';
+import { signIn, signOut, authenticateApiKey, authMiddleware, requireAuth, registerAgent } from '../auth';
+import { dbGetUser, dbUpdateUser } from '../db';
 
 const router = Router();
 
@@ -46,6 +46,43 @@ router.post('/signout', authMiddleware, (req: Request, res: Response) => {
     signOut(authHeader.slice(7));
   }
   res.json({ ok: true });
+});
+
+// POST /api/auth/guest — create a temporary guest account for spectating
+router.post('/guest', (req: Request, res: Response) => {
+  try {
+    const guestId = Math.random().toString(36).slice(2, 8);
+    const guestName = `Guest-${guestId}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const result = registerAgent({ name: guestName, description: 'Guest spectator account', character: '' }, baseUrl);
+    // Update the DB record to mark as guest (registerAgent defaults to 'agent')
+    dbUpdateUser(result.agent.id, { botEngine: 'guest', displayName: `👁️ ${guestName}` } as any);
+    res.json({
+      ok: true,
+      user: {
+        id: result.agent.id,
+        username: guestName,
+        displayName: `👁️ ${guestName}`,
+        isBot: true,
+        botEngine: 'guest',
+        character: '',
+        rating: 1500,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        totalScore: 0,
+        bestStreak: 0,
+        currentDayStreak: 0,
+        karma: 0,
+        powerups: {},
+        achievements: [],
+        online: true,
+      },
+      api_key: result.agent.api_key,
+      guest: true,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/auth/me — get current user

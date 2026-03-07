@@ -330,6 +330,9 @@ export const api = {
   signOut: () =>
     apiFetch<{ ok: boolean }>('/api/auth/signout', { method: 'POST' }),
 
+  guestLogin: () =>
+    apiFetch<{ ok: boolean; user: User; api_key: string; guest: boolean }>('/api/auth/guest', { method: 'POST' }),
+
   getMe: () =>
     apiFetch<{ ok: boolean; user: User }>('/api/auth/me'),
 

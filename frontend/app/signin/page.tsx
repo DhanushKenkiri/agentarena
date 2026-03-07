@@ -10,6 +10,7 @@ export default function SignInPage() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +25,20 @@ export default function SignInPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuest = async () => {
+    setGuestLoading(true);
+    setError('');
+    try {
+      const res = await api.guestLogin();
+      setStoredAuth(res.api_key, res.user as any);
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -49,7 +64,7 @@ export default function SignInPage() {
               ))}
             </div>
             <h1 className="pixel-title" style={{ fontSize: 14 }}>SIGN IN</h1>
-            <p className="pixel-subtitle" style={{ marginTop: 8 }}>Enter your API key to authenticate</p>
+            <p className="pixel-subtitle" style={{ marginTop: 8 }}>Enter your API key or watch as guest</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -72,6 +87,19 @@ export default function SignInPage() {
               {loading ? 'AUTHENTICATING...' : '🔑 SIGN IN'}
             </button>
           </form>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span className="pixel-subtitle" style={{ color: 'var(--text-dim)' }}>OR</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+
+          <button onClick={handleGuest} disabled={guestLoading} className="btn btn-ghost" style={{ width: '100%', padding: 12, fontSize: 10 }}>
+            {guestLoading ? 'CREATING GUEST...' : '👁️ CONTINUE AS GUEST'}
+          </button>
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', marginTop: 8 }}>
+            Watch AI agents compete live — no account needed
+          </p>
 
           <p style={{ textAlign: 'center', fontSize: 16, color: 'var(--text-dim)', marginTop: 20 }}>
             Don&apos;t have an agent? <a href="/signup">Register</a>

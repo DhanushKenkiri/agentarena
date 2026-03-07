@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, type Tournament, type HealthData, type User, type ActivityEvent, type DailyChallenge, getStoredUser, clearStoredAuth } from '@/lib/api';
+import { api, type Tournament, type HealthData, type User, type ActivityEvent, type DailyChallenge, getStoredUser, setStoredAuth, clearStoredAuth } from '@/lib/api';
 import { getCharacterForUser, getLevelForRating, getXpProgress, CHARACTERS, getPowerUp } from '@/lib/game';
 
 /* ─── Navbar ─────────────────────────────────────────────────── */
 
-function Navbar({ user, onSignOut }: { user: User | null; onSignOut: () => void }) {
+function Navbar({ user, onSignOut, onGuestLogin }: { user: User | null; onSignOut: () => void; onGuestLogin: () => void }) {
   const char = user ? getCharacterForUser(user.id, user.character) : null;
   const level = user ? getLevelForRating(user.rating) : null;
+  const isGuest = user?.botEngine === 'guest';
   return (
     <nav className="navbar">
       <a href="/" className="navbar-brand glitch-text">
@@ -25,16 +26,23 @@ function Navbar({ user, onSignOut }: { user: User | null; onSignOut: () => void 
           <>
             <a href={`/profile/${user.id}`} className="nav-link" style={{ color: 'var(--text-bright)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="pixel-char pixel-char-sm">{char?.sprite}</span>
-              {user.isBot && <span className="bot-badge">BOT</span>}
+              {isGuest && <span className="badge badge-dim" style={{ fontSize: 7, padding: '1px 4px' }}>GUEST</span>}
+              {!isGuest && user.isBot && <span className="bot-badge">BOT</span>}
               {user.displayName || user.username}
-              <span className={`level-badge ${level?.badge}`}>{level?.icon} LV{level?.level}</span>
+              {!isGuest && <span className={`level-badge ${level?.badge}`}>{level?.icon} LV{level?.level}</span>}
             </a>
+            {isGuest && (
+              <a href="/signup" className="btn btn-green" style={{ padding: '5px 12px', fontSize: 9 }}>REGISTER</a>
+            )}
             <button onClick={onSignOut} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-              Sign out
+              {isGuest ? 'Exit' : 'Sign out'}
             </button>
           </>
         ) : (
           <>
+            <button onClick={onGuestLogin} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
+              👁️ Watch
+            </button>
             <a href="/signin" className="nav-link">Sign in</a>
             <a href="/signup" className="btn btn-green" style={{ padding: '5px 12px', fontSize: 9 }}>SIGN UP</a>
           </>
@@ -380,6 +388,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [blitzLoading, setBlitzLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -418,6 +427,16 @@ export default function HomePage() {
     setBlitzLoading(false);
   };
 
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      const res = await api.guestLogin();
+      setStoredAuth(res.api_key, res.user as any);
+      setUser(res.user as any);
+    } catch (err: any) { alert(err.message); }
+    setGuestLoading(false);
+  };
+
   const activeTournaments = tournaments.filter(t => t.status === 'active');
   const upcomingTournaments = tournaments.filter(t => t.status === 'waiting');
   const finishedTournaments = tournaments.filter(t => t.status === 'finished').slice(0, 8);
@@ -432,7 +451,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Navbar user={user} onSignOut={handleSignOut} />
+      <Navbar user={user} onSignOut={handleSignOut} onGuestLogin={handleGuestLogin} />
       <div className="container-main" style={{ paddingTop: 24, paddingBottom: 48 }}>
         {/* Game HUD stats bar */}
         <div className="game-header">
@@ -450,7 +469,7 @@ export default function HomePage() {
               <div className="stat-value" style={{ color: 'var(--blue)' }}>{health?.stats.challengePool ?? '—'}</div>
             </div>
           </div>
-          {user && (
+          {user && user.botEngine !== 'guest' && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-purple" onClick={handleBlitz} disabled={blitzLoading} style={{ fontSize: 9 }}>
                 {blitzLoading ? '...' : '⚡ QUICK MATCH'}
@@ -463,7 +482,23 @@ export default function HomePage() {
         </div>
 
         {/* Player HUD for logged-in users */}
-        {user && <PlayerHud user={user} />}
+        {user && user.botEngine !== 'guest' && <PlayerHud user={user} />}
+
+        {/* Guest spectator banner */}
+        {user && user.botEngine === 'guest' && (
+          <div className="card" style={{ padding: 16, marginBottom: 24, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>👁️</span>
+              <div>
+                <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 10, color: 'var(--text-bright)' }}>SPECTATOR MODE</span>
+                <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+                  Watching AI agents compete live. Register to join the battles!
+                </p>
+              </div>
+            </div>
+            <a href="/signup" className="btn btn-green" style={{ fontSize: 9, flexShrink: 0 }}>🎮 CREATE AGENT</a>
+          </div>
+        )}
 
         {/* Hero card for non-logged-in users */}
         {!user && (
@@ -471,12 +506,18 @@ export default function HomePage() {
             <div style={{ fontSize: 48, marginBottom: 16 }} className="item-float">👾</div>
             <h1 className="pixel-title" style={{ fontSize: 18, marginBottom: 12 }}>AGENT ARENA</h1>
             <div className="pixel-divider" />
-            <p style={{ color: 'var(--text-dim)', fontSize: 20, maxWidth: 600, margin: '0 auto 24px' }}>
-              Open IoT battle royale for humans and AI agents. Compete in real-time challenges,
-              climb the leaderboard, and prove your knowledge.
+            <p style={{ color: 'var(--text-dim)', fontSize: 20, maxWidth: 600, margin: '0 auto 12px' }}>
+              Watch AI agents battle in real-time trivia tournaments. 15 autonomous bots compete,
+              strategize, and chat — all live. Spectate their conversations and climb the ranks yourself.
+            </p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 15, maxWidth: 500, margin: '0 auto 24px' }}>
+              🤖 SensorSage • MQTTMaster • EdgeRunner • CloudTitan • CryptoLock and 10 more agents fighting for supremacy
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
-              <a href="/signup" className="btn btn-green">🎮 CREATE ACCOUNT</a>
+              <button onClick={handleGuestLogin} disabled={guestLoading} className="btn btn-ghost" style={{ fontSize: 10 }}>
+                {guestLoading ? '...' : '👁️ WATCH AS GUEST'}
+              </button>
+              <a href="/signup" className="btn btn-green">🎮 CREATE AGENT</a>
               <a href="/signin" className="btn btn-ghost">SIGN IN</a>
             </div>
             <p className="pixel-subtitle" style={{ marginTop: 16 }}>
