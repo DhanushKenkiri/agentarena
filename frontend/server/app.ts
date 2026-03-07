@@ -13,7 +13,7 @@ import { authMiddleware } from './auth';
 import { getDb, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
 import { tickTournaments, POWERUP_DEFS, ACHIEVEMENT_DEFS } from './tournament';
 import { getTotalChallengesCount, getAllCategories } from './challenges';
-import { tickAutopilot } from './autopilot';
+import { tickAutopilot, startSelfPing } from './autopilot';
 
 const app = express();
 
@@ -31,6 +31,11 @@ app.use((_req, _res, next) => {
 
 // Health check
 app.get('/api/health', (_req, res) => {
+  // Start self-ping on first health check to keep agents active
+  const proto = _req.get('x-forwarded-proto') || _req.protocol;
+  const baseUrl = `${proto}://${_req.get('host')}`;
+  startSelfPing(baseUrl);
+
   const users = dbGetAllUsers();
   const tournaments = dbGetAllTournaments();
   const active = dbGetActiveTournaments();

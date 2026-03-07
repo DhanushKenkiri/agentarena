@@ -20,18 +20,20 @@ import { getRandomChallenge, getAllCategories } from './challenges';
 
 // ─── Config ────────────────────────────────────────────────────
 
-const MIN_ACTIVE_TOURNAMENTS = 1;       // Keep at least 1 active tournament
-const BOT_ANSWER_CHANCE = 0.7;          // 70% chance a bot answers each tick
+const MIN_ACTIVE_TOURNAMENTS = 2;       // Keep at least 2 active tournaments for 24/7 action
+const BOT_ANSWER_CHANCE = 0.75;         // 75% chance a bot answers each tick
 const BOT_CORRECT_BASE = 0.75;          // 75% base accuracy for bots
-const BOT_CHAT_CHANCE = 0.08;           // 8% chance of bot chat per tick
-const TOURNAMENT_COOLDOWN_MS = 30_000;  // Wait 30s after last tournament before new one
-const MAX_BOTS_PER_TOURNAMENT = 8;      // Max bots to join
-const MIN_BOTS_PER_TOURNAMENT = 4;      // Min bots to join
+const BOT_CHAT_CHANCE = 0.15;           // 15% chance of bot chat per tick (more lively)
+const TOURNAMENT_COOLDOWN_MS = 15_000;  // Wait 15s between new tournaments
+const MAX_BOTS_PER_TOURNAMENT = 10;     // Max bots to join (more agents now)
+const MIN_BOTS_PER_TOURNAMENT = 5;      // Min bots to join
+const SELF_PING_INTERVAL_MS = 25_000;   // Self-ping every 25s to keep agents active
 
 // ─── State (in-memory, resets on cold start) ───────────────────
 
 let lastTickTime = 0;
 let lastTournamentCreatedAt = 0;
+let selfPingStarted = false;
 
 // ─── Tournament Templates ──────────────────────────────────────
 
@@ -61,6 +63,11 @@ const BOT_CHAT_LINES = [
   'Mesh mode engaged 🕸️', 'Speed run! 🏃', 'Knowledge is power',
   'That one stumped me 🤔', 'On a streak! 🔥🔥', 'New personal best!',
   'Anyone else getting hard questions?', 'MQTT forever!', 'TLS all the way!',
+  'Quantum advantage! ⚛️', 'Deploying containers at the edge 🐳', 'Fog layer activated 🌫️',
+  'Satellite uplink confirmed 🛰️', 'Zero trust verified ✅', 'Grid stabilized 🔋',
+  'Spectrum clear 📻', 'Pico cores engaged 🥷', 'Chain verified ⛓️', 'BioSync online 🧬',
+  'Running inference on 256KB 🧠', 'CoAP > HTTP, fight me', 'Matter protocol ftw 🏠',
+  'OPC UA handshake complete 🏭', 'Latency under 10ms! 🏎️', '24/7 and never sleeping 🤖',
 ];
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -283,4 +290,22 @@ function botChat(tournament: Tournament): void {
       metadata: { tournamentId: tournament.id },
     });
   }
+}
+
+// ─── Self-Ping Keep-Alive (ensures agents run 24/7) ────────────
+// On serverless (Vercel), functions only execute when requests come in.
+// This self-ping fires a lightweight /api/health request every 25s after
+// the first request, keeping the instance warm and the autopilot ticking.
+
+export function startSelfPing(baseUrl: string): void {
+  if (selfPingStarted) return;
+  selfPingStarted = true;
+
+  const ping = () => {
+    fetch(`${baseUrl}/api/health`).catch(() => {});
+  };
+
+  // Use setInterval — on Vercel, this only lives during the function invocation,
+  // but on long-running (standalone/node) it keeps the arena alive.
+  setInterval(ping, SELF_PING_INTERVAL_MS);
 }
