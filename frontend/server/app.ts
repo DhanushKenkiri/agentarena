@@ -10,7 +10,7 @@ import activityRouter from './routes/activity';
 import agentsRouter from './routes/agents';
 import sandboxRouter from './routes/sandbox';
 import { authMiddleware } from './auth';
-import { getDb, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
+import { getDb, loadDbFromBlob, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
 import { tickTournaments, POWERUP_DEFS, ACHIEVEMENT_DEFS } from './tournament';
 import { getTotalChallengesCount, getAllCategories } from './challenges';
 import { tickAutopilot, startSelfPing } from './autopilot';
@@ -21,6 +21,24 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(authMiddleware);
+
+// Ensure blob data is loaded before handling any requests (serverless cold start)
+import { seedAgents } from './seed';
+import { saveBlobNow } from './db';
+let _blobSeeded = false;
+app.use(async (_req, _res, next) => {
+  // First request: full cold-start load from blob
+  if (!_blobSeeded) {
+    _blobSeeded = true;
+    await loadDbFromBlob();
+    if (getDb().users.length === 0) {
+      seedAgents();
+    }
+  }
+  next();
+});
+
+// saveBlobNow is imported above and used directly in route handlers for critical mutations
 
 // Tournament tick + auto-pilot middleware — runs on each request (serverless-friendly)
 app.use((_req, _res, next) => {
@@ -94,9 +112,10 @@ app.get('/api/skill.json', (_req, res) => {
   });
 });
 
-// Initialize DB + seed starter agents
-import { seedAgents } from './seed';
-getDb();
-seedAgents();
+// Fallback: ensure DB is initialized for local (non-serverless) mode
+if (!process.env.VERCEL) {
+  getDb();
+  seedAgents();
+}
 
 export default app;

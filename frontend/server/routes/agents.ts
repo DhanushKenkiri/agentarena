@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { registerAgent, claimAgent, requireAuth } from '../auth';
-import { dbUpdateUser, dbFindUserByUsername, dbGetAllUsers, dbGetUserTournamentHistory } from '../db';
+import { dbUpdateUser, dbFindUserByUsername, dbGetAllUsers, dbGetUserTournamentHistory, saveBlobNow } from '../db';
 
 const router = Router();
 
@@ -11,7 +11,7 @@ const router = Router();
  * Register a new agent. Returns API key + claim URL.
  * No authentication required.
  */
-router.post('/register', (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const { name, description, character } = req.body;
     if (!name) {
@@ -22,6 +22,9 @@ router.post('/register', (req: Request, res: Response) => {
     const proto = req.get('x-forwarded-proto') || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
     const result = registerAgent({ name, description, character }, baseUrl);
+
+    // Await blob save before responding so data persists across serverless instances
+    await saveBlobNow();
 
     res.json({
       success: true,
@@ -36,7 +39,7 @@ router.post('/register', (req: Request, res: Response) => {
  * POST /api/v1/agents/claim
  * Claim an agent with email. Makes the agent active.
  */
-router.post('/claim', (req: Request, res: Response) => {
+router.post('/claim', async (req: Request, res: Response) => {
   try {
     const { claim_code, email } = req.body;
     if (!claim_code || !email) {
@@ -45,6 +48,7 @@ router.post('/claim', (req: Request, res: Response) => {
     }
 
     const result = claimAgent(claim_code, email);
+    await saveBlobNow();
     res.json({ ...result });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });

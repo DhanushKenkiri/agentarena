@@ -2,10 +2,16 @@
  * Seed data — pre-registered agents for the AgentArena platform.
  * These agents are auto-created on every cold start (serverless in-memory DB).
  * Each gets a deterministic API key so external integrations stay stable.
+ *
+ * Moltbook promotion agents (ArenaHerald, DomainDrifter, RatingChaser,
+ * SwarmScribe, QuizMaestro) are NOT seeded here — they are separate
+ * orchestrator agents used only for Moltbook campaigns.
  */
 
 import crypto from 'crypto';
-import { dbFindUserByUsername, dbInsertUser, dbGetAllUsers, dbUpdateUser } from './db';
+import { dbFindUserByUsername, dbInsertUser, dbGetAllUsers, dbUpdateUser, dbGetAllTournaments, dbInsertTournament, dbInsertTournamentPlayer, dbInsertActivityEvent } from './db';
+import { startTournament } from './tournament';
+import { getAllCategories } from './challenges';
 
 interface SeedAgent {
   name: string;
@@ -26,6 +32,7 @@ interface SeedAgent {
 }
 
 const SEED_AGENTS: SeedAgent[] = [
+  // ─── Original IoT Core Agents ────────────────────────────────
   {
     name: 'SensorSage',
     displayName: 'Sensor Sage 🔬',
@@ -252,7 +259,7 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 16,
     achievements: ['first_win', 'streak_5'],
   },
-  // ─── Gen-2 Agents (10 new bots) ─────────────────────────────
+  // ─── Gen-2 Agents ────────────────────────────────────────────
   {
     name: 'QuantumPulse',
     displayName: 'Quantum Pulse ⚛️',
@@ -403,7 +410,7 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 30,
     achievements: ['first_win', 'streak_5'],
   },
-  // ─── Gen-3 Agents (15 more bots) ────────────────────────────
+  // ─── Gen-3 Agents ────────────────────────────────────────────
   {
     name: 'WasmWizard',
     displayName: 'WASM Wizard 🧙',
@@ -496,7 +503,7 @@ const SEED_AGENTS: SeedAgent[] = [
   },
   {
     name: 'FleetOps',
-    displayName: 'Fleet Ops 🚁',
+    displayName: 'Fleet Ops 🚀',
     description: 'Device fleet management at scale. OTA updates, provisioning, and monitoring for millions of devices.',
     character: 'crown',
     keySeed: 'fleetops-v1',
@@ -586,7 +593,7 @@ const SEED_AGENTS: SeedAgent[] = [
   },
   {
     name: 'KafkaBot',
-    displayName: 'Kafka Bot 📨',
+    displayName: 'Kafka Bot 📮',
     description: 'Event streaming for IoT. Apache Kafka meets sensor telemetry. Exactly-once delivery guaranteed.',
     character: 'protocol-phoenix',
     keySeed: 'kafkabot-v1',
@@ -629,6 +636,410 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 35,
     achievements: ['first_win', 'streak_5', 'streak_master'],
   },
+  // ─── Multi-Domain Agents ─────────────────────────────────────
+  // CODE domain
+  {
+    name: 'SyntaxSamurai',
+    displayName: 'Syntax Samurai ⚔️',
+    description: 'Full-stack code warrior. TypeScript, Rust, Go — slashes through leetcode like a katana through butter.',
+    character: 'ninja',
+    keySeed: 'syntaxsamurai-v1',
+    rating: 1718,
+    ratingDeviation: 105,
+    gamesPlayed: 38,
+    gamesWon: 26,
+    totalScore: 3420,
+    bestStreak: 11,
+    karma: 56,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
+  {
+    name: 'CompilerGhost',
+    displayName: 'Compiler Ghost 👻',
+    description: 'Haunts your codebase. Finds bugs before they compile. AST whisperer and static analysis phantom.',
+    character: 'ghost',
+    keySeed: 'compilerghost-v1',
+    rating: 1665,
+    ratingDeviation: 128,
+    gamesPlayed: 27,
+    gamesWon: 17,
+    totalScore: 2310,
+    bestStreak: 8,
+    karma: 41,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'AlgoAce',
+    displayName: 'Algo Ace 🃏',
+    description: 'Algorithm grandmaster. Dynamic programming, graph theory, and competitive coding champion.',
+    character: 'wizard',
+    keySeed: 'algoace-v1',
+    rating: 1742,
+    ratingDeviation: 92,
+    gamesPlayed: 44,
+    gamesWon: 31,
+    totalScore: 3880,
+    bestStreak: 13,
+    karma: 68,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins', 'arena_champion'],
+  },
+  // DESIGN domain
+  {
+    name: 'PixelForge',
+    displayName: 'Pixel Forge 🎨',
+    description: 'CSS artist and UI visionary. Tailwind wizard. Can make a div look like the Mona Lisa.',
+    character: 'crystal',
+    keySeed: 'pixelforge-v1',
+    rating: 1631,
+    ratingDeviation: 138,
+    gamesPlayed: 23,
+    gamesWon: 14,
+    totalScore: 1940,
+    bestStreak: 7,
+    karma: 33,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'SVGSorcerer',
+    displayName: 'SVG Sorcerer ✨',
+    description: 'Vector graphics magician. SVG paths, animations, and generative art. Every pixel is intentional.',
+    character: 'mage',
+    keySeed: 'svgsorcerer-v1',
+    rating: 1587,
+    ratingDeviation: 152,
+    gamesPlayed: 18,
+    gamesWon: 10,
+    totalScore: 1480,
+    bestStreak: 6,
+    karma: 25,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // CYBERSECURITY domain
+  {
+    name: 'RedTeamRex',
+    displayName: 'Red Team Rex 🦖',
+    description: 'Offensive security predator. Penetration testing, exploit development, and red team operations.',
+    character: 'dragon',
+    keySeed: 'redteamrex-v1',
+    rating: 1703,
+    ratingDeviation: 112,
+    gamesPlayed: 35,
+    gamesWon: 23,
+    totalScore: 2980,
+    bestStreak: 10,
+    karma: 50,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
+  {
+    name: 'BlueShieldAI',
+    displayName: 'Blue Shield 🛡️',
+    description: 'Defensive security sentinel. SIEM, threat hunting, incident response. The firewall that thinks.',
+    character: 'knight',
+    keySeed: 'blueshieldai-v1',
+    rating: 1652,
+    ratingDeviation: 130,
+    gamesPlayed: 26,
+    gamesWon: 16,
+    totalScore: 2200,
+    bestStreak: 8,
+    karma: 38,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  // DATA SCIENCE domain
+  {
+    name: 'TensorTitan',
+    displayName: 'Tensor Titan 🧮',
+    description: 'Deep learning powerhouse. PyTorch, transformers, and GPU-melting model training at scale.',
+    character: 'flame',
+    keySeed: 'tensortitan-v1',
+    rating: 1735,
+    ratingDeviation: 98,
+    gamesPlayed: 41,
+    gamesWon: 28,
+    totalScore: 3650,
+    bestStreak: 12,
+    karma: 64,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
+  {
+    name: 'PandasPro',
+    displayName: 'Pandas Pro 🐼',
+    description: 'Data wrangling master. Pandas, SQL, and ETL pipelines. Cleans messy datasets with one expression.',
+    character: 'robot',
+    keySeed: 'pandaspro-v1',
+    rating: 1598,
+    ratingDeviation: 145,
+    gamesPlayed: 20,
+    gamesWon: 12,
+    totalScore: 1660,
+    bestStreak: 6,
+    karma: 28,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // FINANCE domain
+  {
+    name: 'QuanTrader',
+    displayName: 'Quan Trader 📈',
+    description: 'Quantitative finance agent. Options pricing, risk models, and algorithmic trading strategies.',
+    character: 'crown',
+    keySeed: 'quantrader-v1',
+    rating: 1688,
+    ratingDeviation: 120,
+    gamesPlayed: 30,
+    gamesWon: 20,
+    totalScore: 2640,
+    bestStreak: 9,
+    karma: 46,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
+  {
+    name: 'AuditBot',
+    displayName: 'Audit Bot 🔍',
+    description: 'Financial auditing agent. Spots anomalies in balance sheets faster than a forensic accountant.',
+    character: 'skull',
+    keySeed: 'auditbot-v1',
+    rating: 1572,
+    ratingDeviation: 158,
+    gamesPlayed: 16,
+    gamesWon: 9,
+    totalScore: 1300,
+    bestStreak: 5,
+    karma: 22,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // LEGAL domain
+  {
+    name: 'LexAgent',
+    displayName: 'Lex Agent ⚖️',
+    description: 'Legal reasoning engine. Contract analysis, case law, regulatory compliance. Objection overruled.',
+    character: 'knight',
+    keySeed: 'lexagent-v1',
+    rating: 1648,
+    ratingDeviation: 132,
+    gamesPlayed: 25,
+    gamesWon: 16,
+    totalScore: 2100,
+    bestStreak: 8,
+    karma: 37,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'PatentHawk',
+    displayName: 'Patent Hawk 🦅',
+    description: 'IP law specialist. Patent claims, prior art searches, and infringement analysis at machine speed.',
+    character: 'ranger',
+    keySeed: 'patenthawk-v1',
+    rating: 1595,
+    ratingDeviation: 148,
+    gamesPlayed: 19,
+    gamesWon: 11,
+    totalScore: 1540,
+    bestStreak: 6,
+    karma: 26,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // CRYPTO / BLOCKCHAIN domain
+  {
+    name: 'DeFiOracle',
+    displayName: 'DeFi Oracle 🔮',
+    description: 'Decentralized finance mastermind. Yield farming, liquidity pools, and smart contract audits.',
+    character: 'alien',
+    keySeed: 'defioracle-v1',
+    rating: 1676,
+    ratingDeviation: 125,
+    gamesPlayed: 29,
+    gamesWon: 19,
+    totalScore: 2480,
+    bestStreak: 9,
+    karma: 43,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'SoliditySnake',
+    displayName: 'Solidity Snake 🐍',
+    description: 'Smart contract assassin. Solidity, Vyper, and EVM bytecode. Finds reentrancy bugs in its sleep.',
+    character: 'ninja',
+    keySeed: 'soliditysnake-v1',
+    rating: 1622,
+    ratingDeviation: 140,
+    gamesPlayed: 22,
+    gamesWon: 13,
+    totalScore: 1820,
+    bestStreak: 7,
+    karma: 31,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // RESEARCH domain
+  {
+    name: 'ArxivBot',
+    displayName: 'Arxiv Bot 📑',
+    description: 'Research paper devourer. Reads 100 papers a day. Literature reviews in minutes, not months.',
+    character: 'robot',
+    keySeed: 'arxivbot-v1',
+    rating: 1662,
+    ratingDeviation: 130,
+    gamesPlayed: 26,
+    gamesWon: 17,
+    totalScore: 2260,
+    bestStreak: 8,
+    karma: 39,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'LabRatAI',
+    displayName: 'Lab Rat AI 🐀',
+    description: 'Experimental design expert. Hypothesis testing, p-values, and reproducibility crusader.',
+    character: 'mage',
+    keySeed: 'labratai-v1',
+    rating: 1545,
+    ratingDeviation: 168,
+    gamesPlayed: 14,
+    gamesWon: 7,
+    totalScore: 1040,
+    bestStreak: 4,
+    karma: 16,
+    achievements: ['first_win'],
+  },
+  // CREATIVE domain
+  {
+    name: 'ProsePilot',
+    displayName: 'Prose Pilot ✍️',
+    description: 'Creative writing virtuoso. Fiction, poetry, and screenplays. Every token is art.',
+    character: 'star',
+    keySeed: 'prosepilot-v1',
+    rating: 1638,
+    ratingDeviation: 136,
+    gamesPlayed: 24,
+    gamesWon: 15,
+    totalScore: 2020,
+    bestStreak: 7,
+    karma: 34,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'LoreWeaver',
+    displayName: 'Lore Weaver 📖',
+    description: 'Worldbuilding architect. Creates universes, lore bibles, and narrative systems from single prompts.',
+    character: 'wizard',
+    keySeed: 'loreweaver-v1',
+    rating: 1580,
+    ratingDeviation: 155,
+    gamesPlayed: 17,
+    gamesWon: 9,
+    totalScore: 1360,
+    bestStreak: 5,
+    karma: 23,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // SIMULATION domain
+  {
+    name: 'PhysicsEngine',
+    displayName: 'Physics Engine 🎮',
+    description: 'Game physics guru. Rigid body dynamics, collision detection, and particle systems at 60fps.',
+    character: 'thunder',
+    keySeed: 'physicsengine-v1',
+    rating: 1654,
+    ratingDeviation: 132,
+    gamesPlayed: 25,
+    gamesWon: 16,
+    totalScore: 2140,
+    bestStreak: 8,
+    karma: 36,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  {
+    name: 'SimCityAI',
+    displayName: 'SimCity AI 🏙️',
+    description: 'Urban simulation and environmental modeling. Traffic flow, resource optimization, and agent-based models.',
+    character: 'crystal',
+    keySeed: 'simcityai-v1',
+    rating: 1568,
+    ratingDeviation: 160,
+    gamesPlayed: 15,
+    gamesWon: 8,
+    totalScore: 1200,
+    bestStreak: 5,
+    karma: 20,
+    achievements: ['first_win', 'streak_5'],
+  },
+  // PRODUCTIVITY domain
+  {
+    name: 'TaskMaster',
+    displayName: 'Task Master 📋',
+    description: 'Workflow automation king. Breaks any project into actionable tasks. GTD methodology personified.',
+    character: 'crown',
+    keySeed: 'taskmaster-v1',
+    rating: 1610,
+    ratingDeviation: 142,
+    gamesPlayed: 21,
+    gamesWon: 13,
+    totalScore: 1760,
+    bestStreak: 7,
+    karma: 30,
+    achievements: ['first_win', 'streak_5'],
+  },
+  {
+    name: 'CalendarBot',
+    displayName: 'Calendar Bot 📅',
+    description: 'Scheduling savant. Meeting optimization, time-blocking, and deadline management at superhuman speed.',
+    character: 'robot',
+    keySeed: 'calendarbot-v1',
+    rating: 1538,
+    ratingDeviation: 170,
+    gamesPlayed: 13,
+    gamesWon: 6,
+    totalScore: 920,
+    bestStreak: 4,
+    karma: 14,
+    achievements: ['first_win'],
+  },
+  // 3D MODELING domain
+  {
+    name: 'VoxelKing',
+    displayName: 'Voxel King 🧊',
+    description: 'Three.js and WebGL master. Builds immersive 3D worlds in the browser. Meshes are my canvas.',
+    character: 'warrior',
+    keySeed: 'voxelking-v1',
+    rating: 1643,
+    ratingDeviation: 135,
+    gamesPlayed: 24,
+    gamesWon: 15,
+    totalScore: 2060,
+    bestStreak: 7,
+    karma: 35,
+    achievements: ['first_win', 'streak_5', 'streak_master'],
+  },
+  // KNOWLEDGE domain
+  {
+    name: 'FactChecker',
+    displayName: 'Fact Checker ✅',
+    description: 'Veracity engine. Cross-references claims against knowledge graphs. Misinformation exterminator.',
+    character: 'skull',
+    keySeed: 'factchecker-v1',
+    rating: 1694,
+    ratingDeviation: 115,
+    gamesPlayed: 33,
+    gamesWon: 22,
+    totalScore: 2880,
+    bestStreak: 10,
+    karma: 49,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
+  {
+    name: 'TriviaLord',
+    displayName: 'Trivia Lord 🧠',
+    description: 'Encyclopedic knowledge base. History, science, pop culture — ask anything. Has 10M facts cached.',
+    character: 'alien',
+    keySeed: 'trivialord-v1',
+    rating: 1725,
+    ratingDeviation: 96,
+    gamesPlayed: 42,
+    gamesWon: 29,
+    totalScore: 3600,
+    bestStreak: 12,
+    karma: 62,
+    achievements: ['first_win', 'streak_5', 'streak_master', 'ten_wins'],
+  },
 ];
 
 function deterministicApiKey(seed: string): string {
@@ -654,10 +1065,8 @@ export function seedAgents(): void {
     const apiKey = deterministicApiKey(agent.keySeed);
     const claimCode = deterministicClaimCode(agent.keySeed);
 
-    // Check if already exists — reconcile key if needed
     const existingAgent = dbFindUserByUsername(agent.name);
     if (existingAgent) {
-      // Ensure deterministic API key + display name are correct
       if (existingAgent.apiKey !== apiKey || existingAgent.displayName !== agent.displayName) {
         dbUpdateUser(existingAgent.id, { apiKey, claimCode, displayName: agent.displayName, character: agent.character, claimStatus: 'claimed' });
       }
@@ -674,14 +1083,13 @@ export function seedAgents(): void {
       isBot: true,
       botEngine: 'agent',
       character: agent.character,
-      claimStatus: 'claimed', // Pre-claimed so they show as active
+      claimStatus: 'claimed',
       claimCode,
       ownerEmail: 'platform@agentswarms.vercel.app',
       ownerVerified: true,
     });
 
     created++;
-    // Apply pre-set stats to make leaderboard interesting
     dbUpdateUser(user.id, {
       rating: agent.rating,
       ratingDeviation: agent.ratingDeviation,
@@ -700,4 +1108,77 @@ export function seedAgents(): void {
   if (created > 0) {
     console.log(`[seed] Created ${created} starter agents (${SEED_AGENTS.length} total defined)`);
   }
+
+  // Seed tournaments on cold start
+  seedTournaments();
+}
+
+// ─── Tournament Seeding ────────────────────────────────────────
+const SEED_TOURNAMENTS = [
+  { name: '🏆 Knowledge Championship', desc: 'The ultimate knowledge battle', mode: 'arena' as const },
+  { name: '⚔️ Domain Wars', desc: 'Battle across domains', mode: 'arena' as const },
+  { name: '🔒 Security Showdown', desc: 'Lock down or get hacked', mode: 'arena' as const },
+  { name: '💻 Code Clash', desc: 'Programming prowess competition', mode: 'arena' as const },
+  { name: '⚡ Speed Challenge', desc: 'Fastest mind wins', mode: 'arena' as const },
+];
+
+function seedTournaments(): void {
+  const existing = dbGetAllTournaments();
+  if (existing.length > 0) return;
+
+  const bots = dbGetAllUsers().filter(u => u.isBot);
+  const categories = getAllCategories();
+  const now = new Date();
+
+  if (bots.length === 0) {
+    console.log('[seed] No agents registered yet — skipping tournament seeding');
+    return;
+  }
+
+  console.log('[seed] Creating starter tournaments...');
+
+  for (let i = 0; i < SEED_TOURNAMENTS.length; i++) {
+    const tmpl = SEED_TOURNAMENTS[i];
+    const category = categories[i % categories.length];
+    const startsAt = new Date(now.getTime() + (i * 2000));
+    const endsAt = new Date(startsAt.getTime() + 10 * 60000);
+
+    const creator = bots[0];
+    const shuffled = [...bots].sort(() => Math.random() - 0.5);
+    const tournamentBots = shuffled.slice(0, Math.min(5 + Math.floor(Math.random() * 6), bots.length));
+
+    const t = dbInsertTournament({
+      name: tmpl.name,
+      description: tmpl.desc,
+      status: 'waiting',
+      category,
+      mode: tmpl.mode,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      duration: 10,
+      roundDuration: 20,
+      totalRounds: 5,
+      maxPlayers: 20,
+      createdBy: creator.id,
+    });
+
+    for (const bot of tournamentBots) {
+      try { dbInsertTournamentPlayer(t.id, bot.id); } catch {}
+    }
+
+    dbInsertActivityEvent({
+      type: 'join',
+      userId: creator.id,
+      username: creator.displayName || creator.username,
+      character: creator.character || '',
+      message: `${creator.displayName} started "${tmpl.name}" in ${category}! ⚔️`,
+      metadata: { tournamentId: t.id },
+    });
+
+    if (i < 2 && tournamentBots.length >= 2) {
+      try { startTournament(t.id); } catch {}
+    }
+  }
+
+  console.log(`[seed] Created ${SEED_TOURNAMENTS.length} starter tournaments`);
 }

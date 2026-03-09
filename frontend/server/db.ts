@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { put, list } from '@vercel/blob';
 
 const IS_SERVERLESS = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 const DB_PATH = IS_SERVERLESS ? '' : path.join(process.cwd(), 'agentarena-data.json');
+const BLOB_KEY = 'agentarena-db.json';
 
 // ─── Schema Types ──────────────────────────────────────────────
 
@@ -198,51 +200,51 @@ function defaultDb(): DbSchema {
 }
 
 let _db: DbSchema | null = null;
+let _blobLoaded = false;
+
+function migrateDb(parsed: any): DbSchema {
+  const db: DbSchema = {
+    ...defaultDb(),
+    ...parsed,
+    _nextIds: { ...defaultDb()._nextIds, ...parsed._nextIds },
+  };
+  for (const u of db.users) {
+    if (!u.ratingDeviation) u.ratingDeviation = 350;
+    if (!u.ratingVolatility) u.ratingVolatility = 0.06;
+    if (!u.totalScore) u.totalScore = 0;
+    if (!u.bestStreak) u.bestStreak = 0;
+    if (!u.currentDayStreak) u.currentDayStreak = 0;
+    if (!u.lastPlayedDate) u.lastPlayedDate = '';
+    if (!u.powerups) u.powerups = {};
+    if (!u.achievements) u.achievements = [];
+    if (!u.claimStatus) u.claimStatus = 'claimed';
+    if (!u.claimCode) u.claimCode = '';
+    if (!u.ownerEmail) u.ownerEmail = u.email || '';
+    if (u.ownerVerified === undefined) u.ownerVerified = true;
+    if (!u.description) u.description = '';
+    if (u.karma === undefined) u.karma = 0;
+  }
+  for (const t of db.tournaments) {
+    if (!t.mode) t.mode = 'arena';
+    if (!t.winnerId) t.winnerId = 0;
+    if (!t.winnerName) t.winnerName = '';
+  }
+  for (const tp of db.tournamentPlayers) {
+    if (!tp.powerupsUsed) tp.powerupsUsed = [];
+  }
+  if (!db.activityEvents) db.activityEvents = [];
+  if (!db.dailyEntries) db.dailyEntries = [];
+  if (!db._nextIds.activityEvents) db._nextIds.activityEvents = 1;
+  if (!db._nextIds.dailyEntries) db._nextIds.dailyEntries = 1;
+  return db;
+}
 
 function loadDb(): DbSchema {
   if (_db) return _db;
   if (!IS_SERVERLESS && DB_PATH && fs.existsSync(DB_PATH)) {
     try {
       const raw = fs.readFileSync(DB_PATH, 'utf8');
-      const parsed = JSON.parse(raw) as any;
-      // Migrate old schemas — add missing fields
-      _db = {
-        ...defaultDb(),
-        ...parsed,
-        _nextIds: { ...defaultDb()._nextIds, ...parsed._nextIds },
-      };
-      // Ensure new fields exist on old users
-      for (const u of _db!.users) {
-        if (!u.ratingDeviation) u.ratingDeviation = 350;
-        if (!u.ratingVolatility) u.ratingVolatility = 0.06;
-        if (!u.totalScore) u.totalScore = 0;
-        if (!u.bestStreak) u.bestStreak = 0;
-        if (!u.currentDayStreak) u.currentDayStreak = 0;
-        if (!u.lastPlayedDate) u.lastPlayedDate = '';
-        if (!u.powerups) u.powerups = {};
-        if (!u.achievements) u.achievements = [];
-        // Claim flow migration
-        if (!u.claimStatus) u.claimStatus = 'claimed'; // existing users are auto-claimed
-        if (!u.claimCode) u.claimCode = '';
-        if (!u.ownerEmail) u.ownerEmail = u.email || '';
-        if (u.ownerVerified === undefined) u.ownerVerified = true; // existing = verified
-        if (!u.description) u.description = '';
-        if (u.karma === undefined) u.karma = 0;
-      }
-      // Ensure new tournament fields
-      for (const t of _db!.tournaments) {
-        if (!t.mode) t.mode = 'arena';
-        if (!t.winnerId) t.winnerId = 0;
-        if (!t.winnerName) t.winnerName = '';
-      }
-      // Ensure new player fields
-      for (const tp of _db!.tournamentPlayers) {
-        if (!tp.powerupsUsed) tp.powerupsUsed = [];
-      }
-      if (!_db!.activityEvents) _db!.activityEvents = [];
-      if (!_db!.dailyEntries) _db!.dailyEntries = [];
-      if (!_db!._nextIds.activityEvents) _db!._nextIds.activityEvents = 1;
-      if (!_db!._nextIds.dailyEntries) _db!._nextIds.dailyEntries = 1;
+      _db = migrateDb(JSON.parse(raw));
     } catch {
       _db = defaultDb();
     }
@@ -252,9 +254,79 @@ function loadDb(): DbSchema {
   return _db!;
 }
 
+/** Load DB from Vercel Blob if available (called once on cold start) */
+export async function loadDbFromBlob(): Promise<void> {
+  if (_blobLoaded || !IS_SERVERLESS) return;
+  _blobLoaded = true;
+  try {
+    const blobs = await list({ prefix: BLOB_KEY });
+    const match = blobs.blobs.find(b => b.pathname === BLOB_KEY);
+    if (match) {
+      const res = await fetch(match.url);
+      if (res.ok) {
+        const parsed = await res.json();
+        _db = migrateDb(parsed);
+        return;
+      }
+    }
+  } catch (e) {
+    console.log('[db] Blob load failed, using seed:', (e as Error).message);
+  }
+  // No blob data found — will use seed data
+}
+
+/** Persist DB to Vercel Blob — returns a promise that must be awaited */
+let _blobSavePromise: Promise<void> | null = null;
+
+export function saveBlobNow(): Promise<void> {
+  if (!IS_SERVERLESS || !_db) return Promise.resolve();
+  if (_blobSavePromise) return _blobSavePromise;
+  _blobSavePromise = (async () => {
+    try {
+      await put(BLOB_KEY, JSON.stringify(_db), {
+        access: 'public',
+        addRandomSuffix: false,
+      });
+    } catch (e) {
+      console.log('[db] Blob save failed:', (e as Error).message);
+    } finally {
+      _blobSavePromise = null;
+    }
+  })();
+  return _blobSavePromise;
+}
+
+function scheduleBlobSave() {
+  // In serverless: do NOT fire-and-forget blob saves — stale instances would overwrite
+  // fresh data. Only explicit `await saveBlobNow()` in route handlers should persist.
+  if (IS_SERVERLESS) return;
+}
+
 function saveDb() {
-  if (!_db || IS_SERVERLESS) return;
+  if (!_db) return;
+  if (IS_SERVERLESS) {
+    // In-memory only; route handlers call saveBlobNow() explicitly
+    return;
+  }
   fs.writeFileSync(DB_PATH, JSON.stringify(_db, null, 2), 'utf8');
+}
+
+/** Reload DB from blob to get latest data (prevents stale writes between instances) */
+export async function reloadFromBlob(): Promise<void> {
+  if (!IS_SERVERLESS) return;
+  try {
+    const blobs = await list({ prefix: BLOB_KEY });
+    const match = blobs.blobs.find(b => b.pathname === BLOB_KEY);
+    if (match) {
+      const res = await fetch(match.url + '?t=' + Date.now()); // Cache-bust
+      if (res.ok) {
+        const parsed = await res.json();
+        _db = migrateDb(parsed);
+      }
+    }
+  } catch (e) {
+    console.log('[db] Blob reload failed:', (e as Error).message);
+  }
 }
 
 export function getDb() { return loadDb(); }
