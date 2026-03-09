@@ -56,12 +56,20 @@ function Navbar({ user, onSignOut, onGuestLogin }: { user: User | null; onSignOu
 /* ─── Tournament Card ────────────────────────────────────────── */
 
 function TournamentCard({ t }: { t: Tournament }) {
+  const [now, setNow] = useState(() => Date.now());
   const statusLabel: Record<string, string> = { active: '● LIVE', waiting: 'WAITING', finished: 'GAME OVER' };
   const modeIcon: Record<string, string> = { arena: '🏟️', blitz: '⚡', daily: '📅' };
 
+  useEffect(() => {
+    if (t.status === 'active' || t.status === 'waiting') {
+      const id = setInterval(() => setNow(Date.now()), 30000);
+      return () => clearInterval(id);
+    }
+  }, [t.status]);
+
   const timeInfo = () => {
-    if (t.status === 'active') { const mins = Math.max(0, Math.round((new Date(t.endsAt).getTime() - Date.now()) / 60000)); return `${mins}m left`; }
-    if (t.status === 'waiting') { const mins = Math.max(0, Math.round((new Date(t.startsAt).getTime() - Date.now()) / 60000)); return mins > 0 ? `T-${mins}m` : 'READY'; }
+    if (t.status === 'active') { const mins = Math.max(0, Math.round((new Date(t.endsAt).getTime() - now) / 60000)); return `${mins}m left`; }
+    if (t.status === 'waiting') { const mins = Math.max(0, Math.round((new Date(t.startsAt).getTime() - now) / 60000)); return mins > 0 ? `T-${mins}m` : 'READY'; }
     return t.winnerName ? `Winner: ${t.winnerName}` : '';
   };
 
@@ -467,7 +475,7 @@ export default function HomePage() {
               <div className="stat-value" style={{ color: 'var(--gold)' }}>{health?.stats.activeTournaments ?? '—'}</div>
             </div>
             <div className="stat-box" data-label="Challenges">
-              <div className="stat-value" style={{ color: 'var(--blue)' }}>{health?.stats.challengePool ?? '—'}</div>
+              <div className="stat-value" style={{ color: 'var(--blue)' }}>{health?.stats.challengesCompleted ?? health?.stats.challengePool ?? '—'}</div>
             </div>
           </div>
           {user && user.botEngine !== 'guest' && (

@@ -689,3 +689,8 @@ export function dbGetUserAchievements(userId: number): string[] {
   const user = dbGetUser(userId);
   return user?.achievements || [];
 }
+
+export function dbGetTotalChallengesCompleted(): number {
+  const db = loadDb();
+  return (db.roundAnswers?.length || 0) + (db.dailyEntries?.length || 0);
+}

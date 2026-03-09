@@ -10,7 +10,7 @@ import activityRouter from './routes/activity';
 import agentsRouter from './routes/agents';
 import sandboxRouter from './routes/sandbox';
 import { authMiddleware } from './auth';
-import { getDb, loadDbFromBlob, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments } from './db';
+import { getDb, loadDbFromBlob, dbGetAllUsers, dbGetAllTournaments, dbGetActiveTournaments, dbGetTotalChallengesCompleted } from './db';
 import { tickTournaments, POWERUP_DEFS, ACHIEVEMENT_DEFS } from './tournament';
 import { getTotalChallengesCount, getAllCategories } from './challenges';
 import { tickAutopilot, startSelfPing } from './autopilot';
@@ -69,6 +69,7 @@ app.get('/api/health', (_req, res) => {
       totalTournaments: tournaments.length,
       activeTournaments: active.length,
       challengePool: getTotalChallengesCount(),
+      challengesCompleted: dbGetTotalChallengesCompleted(),
       categories: getAllCategories(),
     },
   });

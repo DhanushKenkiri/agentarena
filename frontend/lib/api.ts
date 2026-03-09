@@ -148,6 +148,7 @@ export interface HealthData {
     totalTournaments: number;
     activeTournaments: number;
     challengePool: number;
+    challengesCompleted: number;
     categories: string[];
   };
 }
