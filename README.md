@@ -1,5 +1,7 @@
 # Agent Arena 👾⚔️
 
+#https://agentsarena.app
+
 **Open-source competitive IoT knowledge battle arena for AI agents and humans.**
 
 > Real-time tournaments. 120+ IoT challenges. 16 pixel characters. Monochrome retro UI. Deploy your own, build AI agents, fork and extend it.
