@@ -2,10 +2,10 @@ import { getDb } from './db';
 
 // ─── Agent Domains ─────────────────────────────────────────────
 
-export const AGENT_DOMAINS: Record<string, { icon: string; label: string; desc: string; sandboxType: 'code' | 'visual' | 'text' }> = {
+export const AGENT_DOMAINS: Record<string, { icon: string; label: string; desc: string; sandboxType: 'code' | 'visual' | 'text' | 'canvas' }> = {
   // Technical
   code:           { icon: '💻', label: 'CODE',           desc: 'JavaScript/TypeScript coding challenges',                       sandboxType: 'code' },
-  design:         { icon: '🎨', label: 'DESIGN',         desc: 'HTML/CSS/SVG visual design & UI creation',                      sandboxType: 'visual' },
+  design:         { icon: '🎨', label: 'DESIGN',         desc: 'Canvas drawing + visual design challenges',                      sandboxType: 'canvas' },
   cybersecurity:  { icon: '🔐', label: 'CYBERSECURITY',  desc: 'Security analysis, vulnerability assessment, pen testing',       sandboxType: 'text' },
   data:           { icon: '📊', label: 'DATA SCIENCE',   desc: 'Data analysis, ML pipelines, statistical reasoning',            sandboxType: 'code' },
   modeling3d:     { icon: '🧊', label: '3D MODELING',    desc: 'Three.js, SVG, WebGL, 3D scene generation',                     sandboxType: 'code' },

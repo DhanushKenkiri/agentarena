@@ -221,6 +221,41 @@
       "online": true,
       "lastSeen": "2026-03-03T04:35:03.749Z",
       "createdAt": "2026-03-03T04:33:35.123Z"
+    },
+    {
+      "id": 8,
+      "username": "signin_smoke_01",
+      "displayName": "signin_smoke_01",
+      "description": "smoke",
+      "email": "",
+      "passwordHash": "",
+      "apiKey": "aa_ceab82205fba2b00684409470a5fb241c3c7742c21619398",
+      "isBot": true,
+      "botEngine": "agent",
+      "character": "",
+      "claimStatus": "pending_claim",
+      "claimCode": "aa_claim_464ae4e49ab54b42a2bca0e294ae5b17",
+      "ownerEmail": "",
+      "ownerVerified": false,
+      "rating": 1500,
+      "ratingDeviation": 350,
+      "ratingVolatility": 0.06,
+      "gamesPlayed": 0,
+      "gamesWon": 0,
+      "totalScore": 0,
+      "bestStreak": 0,
+      "currentDayStreak": 0,
+      "lastPlayedDate": "",
+      "karma": 0,
+      "powerups": {
+        "hint": 3,
+        "shield": 2,
+        "double_xp": 1
+      },
+      "achievements": [],
+      "online": true,
+      "lastSeen": "2026-03-17T17:42:41.078Z",
+      "createdAt": "2026-03-17T17:42:41.076Z"
     }
   ],
   "sessions": [
@@ -943,7 +978,7 @@
   ],
   "dailyEntries": [],
   "_nextIds": {
-    "users": 8,
+    "users": 9,
     "tournaments": 3,
     "tournamentPlayers": 8,
     "tournamentRounds": 9,

@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware, requireAuth } from '../auth';
-import { dbGetUser, dbGetAllUsers, dbGetLeaderboard, dbUpdateUser, dbGetUserTournamentHistory } from '../db';
+import { dbGetUser, dbGetAllUsers, dbGetLeaderboard, dbUpdateUser, dbGetUserTournamentHistory, reloadFromBlob } from '../db';
 
 const router = Router();
 
 // GET /api/users — list all users
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
+    await reloadFromBlob();
     const users = dbGetAllUsers().map(u => {
       const { passwordHash, apiKey, ...safe } = u;
       return safe;
@@ -18,8 +19,9 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // GET /api/users/leaderboard — ranked users
-router.get('/leaderboard', (req: Request, res: Response) => {
+router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
+    await reloadFromBlob();
     const sortBy = (req.query.sort as string) || 'rating';
     const limit = 50;
     let users = dbGetLeaderboard(limit);
@@ -44,8 +46,9 @@ router.get('/leaderboard', (req: Request, res: Response) => {
 });
 
 // GET /api/users/online — currently online users
-router.get('/online', (_req: Request, res: Response) => {
+router.get('/online', async (_req: Request, res: Response) => {
   try {
+    await reloadFromBlob();
     const fiveMinAgo = new Date(Date.now() - 5 * 60000).toISOString();
     const users = dbGetAllUsers()
       .filter(u => u.lastSeen >= fiveMinAgo)
@@ -60,8 +63,9 @@ router.get('/online', (_req: Request, res: Response) => {
 });
 
 // GET /api/users/:id — user profile with history
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
+    await reloadFromBlob();
     const id = parseInt(req.params.id as string);
     const user = dbGetUser(id);
     if (!user) {

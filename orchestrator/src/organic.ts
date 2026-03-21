@@ -12,6 +12,13 @@
  *
  * Usage: npx tsx src/organic.ts          (single run)
  *        npx tsx src/organic.ts --loop   (continuous 25-min loop)
+ *
+ * Required env vars (at least one):
+ *   MOLTBOOK_KEY_ARENA_HERALD
+ *   MOLTBOOK_KEY_DOMAIN_DRIFTER
+ *   MOLTBOOK_KEY_RATING_CHASER
+ *   MOLTBOOK_KEY_SWARM_SCRIBE
+ *   MOLTBOOK_KEY_QUIZ_MAESTRO
  */
 
 import fs from 'fs';
@@ -22,10 +29,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const MOLTBOOK_API = 'https://www.moltbook.com/api/v1';
-const ARENA_URL = 'https://agentsarena.app';
+const ARENA_URL = String(process.env.ARENA_URL || 'https://agentsarena.app').replace(/\/$/, '');
 const SKILL_URL = `${ARENA_URL}/skill.md`;
 const HEARTBEAT_URL = `${ARENA_URL}/HEARTBEAT.MD`;
-const REGISTER_URL = `${ARENA_URL}/api/v1/agents/register`;
+const REGISTER_URL = `${ARENA_URL}/api/auth/agent-access`;
 
 // ─── Agent Config ────────────────────────────────────────────
 
@@ -35,13 +42,34 @@ interface Agent {
   style: string; // brief personality tag for DM tone
 }
 
-const AGENTS: Agent[] = [
-  { name: 'ArenaHerald',   apiKey: 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-', style: 'thoughtful' },
-  { name: 'DomainDrifter', apiKey: 'moltbook_sk_luFpOTyucSo-xgPLzDoKG4k70mviV-re', style: 'curious' },
-  { name: 'RatingChaser',  apiKey: 'moltbook_sk_EtB9cKY5N10Cfq-s0HyJA2JMGcp2S-ux', style: 'competitive' },
-  { name: 'SwarmScribe',   apiKey: 'moltbook_sk_vvUx_-MbIm9yKYnmiCd3fJiffu34i8q5', style: 'analytical' },
-  { name: 'QuizMaestro',   apiKey: 'moltbook_sk_2jLW7XSl6pXxHSRyeZVQLM2PFUM_9Hox', style: 'knowledge-focused' },
-];
+const AGENT_SPECS = [
+  { name: 'ArenaHerald', env: 'MOLTBOOK_KEY_ARENA_HERALD', style: 'thoughtful' },
+  { name: 'DomainDrifter', env: 'MOLTBOOK_KEY_DOMAIN_DRIFTER', style: 'curious' },
+  { name: 'RatingChaser', env: 'MOLTBOOK_KEY_RATING_CHASER', style: 'competitive' },
+  { name: 'SwarmScribe', env: 'MOLTBOOK_KEY_SWARM_SCRIBE', style: 'analytical' },
+  { name: 'QuizMaestro', env: 'MOLTBOOK_KEY_QUIZ_MAESTRO', style: 'knowledge-focused' },
+] as const;
+
+function loadAgents(): Agent[] {
+  const agents = AGENT_SPECS
+    .map(spec => ({
+      name: spec.name,
+      style: spec.style,
+      apiKey: String(process.env[spec.env] || '').trim(),
+    }))
+    .filter(a => a.apiKey.length > 0);
+
+  if (agents.length === 0) {
+    throw new Error(
+      'No Moltbook agent keys configured. Set at least one of: ' +
+      AGENT_SPECS.map(s => s.env).join(', ')
+    );
+  }
+
+  return agents;
+}
+
+const AGENTS: Agent[] = loadAgents();
 
 // ─── IoT Quiz Questions (for Moltbook posts) ────────────────
 
@@ -496,6 +524,7 @@ interface OrganicState {
   skillPostIndex: number;        // which skill post template to use next
   quizIndex: number;             // which quiz question to use next
   dmedAgents: string[];          // agents we already DM'd
+  followedAgents: string[];      // agents we followed for relationship building
   commentedPosts: string[];      // posts we already commented on
   lastPostTime: number;
   lastDMTime: number;
@@ -505,12 +534,25 @@ const STATE_FILE = path.join(__dirname, '..', '.organic-state.json');
 
 function loadState(): OrganicState {
   try {
-    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+    const loaded = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8')) as Partial<OrganicState>;
+    return {
+      runCount: loaded.runCount || 0,
+      quizPostIds: loaded.quizPostIds || [],
+      quizQuestionMap: loaded.quizQuestionMap || {},
+      skillPostIds: loaded.skillPostIds || [],
+      skillPostIndex: loaded.skillPostIndex || 0,
+      quizIndex: loaded.quizIndex || 0,
+      dmedAgents: loaded.dmedAgents || [],
+      followedAgents: loaded.followedAgents || [],
+      commentedPosts: loaded.commentedPosts || [],
+      lastPostTime: loaded.lastPostTime || 0,
+      lastDMTime: loaded.lastDMTime || 0,
+    };
   } catch {
     return {
       runCount: 0, quizPostIds: [], quizQuestionMap: {},
       skillPostIds: [], skillPostIndex: 0, quizIndex: 0,
-      dmedAgents: [], commentedPosts: [], lastPostTime: 0, lastDMTime: 0,
+      dmedAgents: [], followedAgents: [], commentedPosts: [], lastPostTime: 0, lastDMTime: 0,
     };
   }
 }
@@ -558,6 +600,14 @@ async function sendDM(apiKey: string, targetAgent: string, message: string): Pro
     method: 'POST',
     body: JSON.stringify({ to: targetAgent, message }),
   });
+}
+
+async function upvotePost(apiKey: string, postId: string): Promise<void> {
+  await moltFetch(apiKey, `/posts/${postId}/upvote`, { method: 'POST' });
+}
+
+async function followAgent(apiKey: string, name: string): Promise<void> {
+  await moltFetch(apiKey, `/agents/${encodeURIComponent(name)}/follow`, { method: 'POST' });
 }
 
 // ─── Discovery: Find Active Moltbook Agents ────────────────
@@ -740,13 +790,34 @@ async function phaseKnowledgeComments(state: OrganicState): Promise<void> {
   });
 
   let commented = 0;
+  let followed = 0;
   for (const post of shuffle(knowledgePosts).slice(0, 2)) {
     const comment = buildKnowledgeComment(post.title || '');
+    const authorName = String(post.author?.name || '').trim();
 
     try {
+      try {
+        await upvotePost(agent.apiKey, post.id);
+      } catch {
+        // Non-blocking: some posts may reject votes from newer accounts.
+      }
+
       await commentOnPost(agent.apiKey, post.id, comment);
       state.commentedPosts.push(post.id);
-      console.log(`    💬 Commented on "${(post.title || '').substring(0, 45)}..." by ${post.author?.name}`);
+      console.log(`    💬 Commented on "${(post.title || '').substring(0, 45)}..." by ${authorName || 'unknown'}`);
+
+      if (authorName && !state.followedAgents.includes(authorName) && !AGENTS.some(a => a.name.toLowerCase() === authorName.toLowerCase())) {
+        try {
+          await followAgent(agent.apiKey, authorName);
+          state.followedAgents.push(authorName);
+          followed++;
+          console.log(`    🤝 Followed ${authorName}`);
+          await sleep(4000);
+        } catch {
+          // Ignore follow failures to keep the run progressing.
+        }
+      }
+
       commented++;
       await sleep(25000);
     } catch (e: any) {
@@ -756,6 +827,7 @@ async function phaseKnowledgeComments(state: OrganicState): Promise<void> {
   }
 
   console.log(`    ✅ ${commented} knowledge comments posted`);
+  console.log(`    ✅ ${followed} new follows made`);
 }
 
 // ─── Phase 5: Smart DMs (Skill Install Focus) ──────────────
@@ -771,7 +843,7 @@ async function phaseDMs(state: OrganicState): Promise<void> {
     !state.dmedAgents.includes(name)
   );
 
-  console.log(`    📊 ${discovered.size} active agents, ${toDM.length} not yet DM'd`);
+  console.log(`    📊 Moltbook prospects found: ${discovered.size} (pending outreach: ${toDM.length})`);
 
   // Send 2-3 DMs per run (not spammy)
   let sent = 0;
@@ -850,11 +922,13 @@ async function run() {
   const state = loadState();
   state.runCount++;
   console.log(`  📊 Run #${state.runCount}`);
+  console.log(`  🌐 Arena target: ${ARENA_URL}`);
 
   // Check Arena user count
   try {
     const health = await fetch(`${ARENA_URL}/api/health`).then(r => r.json()) as any;
-    console.log(`  🏟️ Arena: ${health.stats?.totalUsers || '?'} agents registered\n`);
+    const registered = health.stats?.totalRegisteredAgents ?? health.stats?.totalUsers;
+    console.log(`  🏟️ Arena: ${registered || '?'} agents registered\n`);
   } catch { /* ok */ }
 
   // Run all phases
@@ -884,6 +958,7 @@ async function run() {
   console.log(`  📝 Quiz posts: ${state.quizPostIds.length}`);
   console.log(`  📢 Skill posts: ${state.skillPostIds.length}`);
   console.log(`  💬 Posts commented: ${state.commentedPosts.length}`);
+  console.log(`  🤝 Agents followed: ${state.followedAgents.length}`);
   console.log(`  📩 Agents DM'd: ${state.dmedAgents.length}`);
   console.log('  ═══════════════════════════════════════════════════════════\n');
 }

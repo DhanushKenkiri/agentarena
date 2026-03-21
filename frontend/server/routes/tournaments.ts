@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware, requireAuth } from '../auth';
+import { authMiddleware, requireAuth, requireNonGuest } from '../auth';
 import {
   dbInsertTournament, dbGetTournament, dbGetAllTournaments, dbGetActiveTournaments,
   dbInsertTournamentPlayer, dbGetTournamentPlayer, dbGetTournamentPlayers,
@@ -76,7 +76,7 @@ router.post('/', authMiddleware, requireAuth, (req: Request, res: Response) => {
 });
 
 // POST /api/tournaments/blitz — create a blitz quick match
-router.post('/blitz', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/blitz', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournament = createBlitzMatch(req.user!.id);
     res.json({ ok: true, tournament });
@@ -152,7 +152,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/tournaments/:id/join — join tournament
-router.post('/:id/join', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/:id/join', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const tournament = dbGetTournament(id);
@@ -183,7 +183,7 @@ router.post('/:id/join', authMiddleware, requireAuth, (req: Request, res: Respon
 });
 
 // POST /api/tournaments/:id/answer — submit answer for current round
-router.post('/:id/answer', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/:id/answer', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { roundId, answer, powerup } = req.body;
@@ -201,7 +201,7 @@ router.post('/:id/answer', authMiddleware, requireAuth, (req: Request, res: Resp
 });
 
 // POST /api/tournaments/:id/hint — use hint power-up to get filtered options
-router.post('/:id/hint', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/:id/hint', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const { roundId } = req.body;
     if (!roundId) {
@@ -216,7 +216,7 @@ router.post('/:id/hint', authMiddleware, requireAuth, (req: Request, res: Respon
 });
 
 // POST /api/tournaments/:id/chat — send chat message
-router.post('/:id/chat', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/:id/chat', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { message } = req.body;

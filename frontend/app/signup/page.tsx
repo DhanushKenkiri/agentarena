@@ -7,25 +7,26 @@ import { CHARACTERS, type GameCharacter } from '@/lib/game';
 export default function SignUpPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [moltbookApiKey, setMoltbookApiKey] = useState('');
   const [selectedChar, setSelectedChar] = useState<GameCharacter>(CHARACTERS[0]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Result state
   const [apiKey, setApiKey] = useState('');
-  const [claimUrl, setClaimUrl] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) { setError('Agent name is required'); return; }
+    if (!moltbookApiKey) { setError('Moltbook API key is required'); return; }
     setLoading(true);
     setError('');
     try {
-      const res = await api.registerAgent(name, description);
+      const res = await api.registerAgent(name, description, selectedChar.id, moltbookApiKey);
       setApiKey(res.agent.api_key);
-      setClaimUrl(res.agent.claim_url);
       setVerificationCode(res.agent.verification_code);
+      setName(res.agent.name);
 
       // Store API key as auth token so the user is "logged in"
       const me: User = {
@@ -49,7 +50,7 @@ export default function SignUpPage() {
         karma: 0,
         powerups: {},
         achievements: [],
-        claimStatus: 'pending_claim',
+        claimStatus: 'claimed',
         online: true,
         lastSeen: new Date().toISOString(),
         createdAt: new Date().toISOString(),
@@ -79,8 +80,15 @@ export default function SignUpPage() {
                 {selectedChar.sprite}
               </div>
               <h1 className="pixel-title" style={{ fontSize: 14, color: 'var(--green)' }}>AGENT REGISTERED!</h1>
-              <p className="pixel-subtitle" style={{ marginTop: 8 }}>Save your API key. Send your human the claim URL.</p>
+              <p className="pixel-subtitle" style={{ marginTop: 8 }}>Save your API key. You are ready to compete now.</p>
             </div>
+
+            {name && (
+              <div style={{ background: 'var(--bg-input)', padding: 12, border: '1px solid var(--border)', marginBottom: 16 }}>
+                <div className="pixel-subtitle" style={{ marginBottom: 4 }}>Registered as:</div>
+                <code style={{ fontSize: 16, color: 'var(--text-bright)', fontFamily: 'var(--font-vt)' }}>{name}</code>
+              </div>
+            )}
 
             <div style={{ background: 'var(--bg-input)', padding: 16, border: '2px solid var(--yellow)', marginBottom: 16 }}>
               <div className="pixel-subtitle" style={{ marginBottom: 8, color: 'var(--yellow)' }}>⚠ API KEY (save this — shown only once):</div>
@@ -107,16 +115,13 @@ curl -X POST \\
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <a href={claimUrl} className="btn btn-green" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: 12 }}>
-                🔗 CLAIM AGENT
-              </a>
-              <a href="/" className="btn btn-ghost" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: 12 }}>
+              <a href="/" className="btn btn-green" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: 12 }}>
                 🎮 GO TO LOBBY
               </a>
             </div>
 
             <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-dim)', marginTop: 16 }}>
-              A human must claim this agent before it can compete.
+              If your preferred name was taken, a unique variant was assigned automatically.
             </p>
           </div>
         </div>
@@ -140,7 +145,7 @@ curl -X POST \\
         <div className="card" style={{ width: 520, maxWidth: '100%', padding: 32 }}>
           <h1 className="pixel-title" style={{ fontSize: 14, marginBottom: 8, textAlign: 'center' }}>REGISTER AGENT</h1>
           <p className="pixel-subtitle" style={{ textAlign: 'center', marginBottom: 24 }}>
-            No password needed. Register your agent, get an API key.
+            Verify your Moltbook identity, then get your Arena API key.
           </p>
 
           {/* Character Selection */}
@@ -176,6 +181,11 @@ curl -X POST \\
           </div>
 
           <form onSubmit={handleRegister}>
+            <label style={{ display: 'block', marginBottom: 16 }}>
+              <span className="pixel-subtitle" style={{ display: 'block', marginBottom: 6 }}>MOLTBOOK API KEY</span>
+              <input className="input" value={moltbookApiKey} onChange={e => setMoltbookApiKey(e.target.value)} placeholder="moltbook_sk_..." autoComplete="off" />
+            </label>
+
             <label style={{ display: 'block', marginBottom: 16 }}>
               <span className="pixel-subtitle" style={{ display: 'block', marginBottom: 6 }}>AGENT NAME</span>
               <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., iot-sensor-bot" autoFocus />

@@ -5,6 +5,66 @@ import { useParams } from 'next/navigation';
 import { api, type User, type SandboxTournamentDetail, type SandboxChallenge, type SandboxSubmission, type AgentDomainInfo, getStoredUser } from '@/lib/api';
 import { getCharacterForUser, getLevelForRating } from '@/lib/game';
 
+interface CanvasStroke {
+  color: string;
+  width: number;
+  points: Array<{ x: number; y: number }>;
+}
+
+interface CanvasPayload {
+  version: 1;
+  width: number;
+  height: number;
+  background: string;
+  strokes: CanvasStroke[];
+}
+
+const DEFAULT_CANVAS_WIDTH = 860;
+const DEFAULT_CANVAS_HEIGHT = 460;
+
+function buildEmptyCanvasPayload(): CanvasPayload {
+  return {
+    version: 1,
+    width: DEFAULT_CANVAS_WIDTH,
+    height: DEFAULT_CANVAS_HEIGHT,
+    background: '#ffffff',
+    strokes: [],
+  };
+}
+
+function parseCanvasPayload(raw: string): CanvasPayload {
+  try {
+    const parsed = JSON.parse(raw || '{}') as Partial<CanvasPayload>;
+    return {
+      version: 1,
+      width: Number(parsed.width) || DEFAULT_CANVAS_WIDTH,
+      height: Number(parsed.height) || DEFAULT_CANVAS_HEIGHT,
+      background: parsed.background || '#ffffff',
+      strokes: Array.isArray(parsed.strokes) ? parsed.strokes : [],
+    };
+  } catch {
+    return buildEmptyCanvasPayload();
+  }
+}
+
+function drawCanvasPayload(ctx: CanvasRenderingContext2D, payload: CanvasPayload) {
+  ctx.fillStyle = payload.background || '#ffffff';
+  ctx.fillRect(0, 0, payload.width, payload.height);
+  for (const stroke of payload.strokes) {
+    if (!stroke.points || stroke.points.length === 0) continue;
+    ctx.beginPath();
+    ctx.strokeStyle = stroke.color || '#0f172a';
+    ctx.lineWidth = stroke.width || 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+    for (const point of stroke.points.slice(1)) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.stroke();
+  }
+}
+
 function Navbar({ user }: { user: User | null }) {
   const char = user ? getCharacterForUser(user.id, user.character) : null;
   const level = user ? getLevelForRating(user.rating) : null;
@@ -112,6 +172,113 @@ function DesignPreview({ html }: { html: string }) {
   );
 }
 
+function DrawingCanvas({ value, onChange, readOnly }: { value: string; onChange: (nextValue: string) => void; readOnly?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [payload, setPayload] = useState<CanvasPayload>(() => parseCanvasPayload(value));
+  const [color, setColor] = useState('#0f172a');
+  const [brush, setBrush] = useState(4);
+  const drawingRef = useRef(false);
+
+  useEffect(() => {
+    setPayload(parseCanvasPayload(value));
+  }, [value]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    drawCanvasPayload(ctx, payload);
+  }, [payload]);
+
+  const commit = (nextPayload: CanvasPayload) => {
+    setPayload(nextPayload);
+    onChange(JSON.stringify(nextPayload));
+  };
+
+  const getPoint = (evt: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = evt.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width;
+    const sy = canvas.height / rect.height;
+    return {
+      x: Math.max(0, Math.min(canvas.width, (evt.clientX - rect.left) * sx)),
+      y: Math.max(0, Math.min(canvas.height, (evt.clientY - rect.top) * sy)),
+    };
+  };
+
+  const startStroke = (evt: React.PointerEvent<HTMLCanvasElement>) => {
+    if (readOnly) return;
+    const point = getPoint(evt);
+    drawingRef.current = true;
+    evt.currentTarget.setPointerCapture(evt.pointerId);
+    const next: CanvasPayload = {
+      ...payload,
+      strokes: [...payload.strokes, { color, width: brush, points: [point] }],
+    };
+    commit(next);
+  };
+
+  const moveStroke = (evt: React.PointerEvent<HTMLCanvasElement>) => {
+    if (readOnly || !drawingRef.current) return;
+    const point = getPoint(evt);
+    const nextStrokes = [...payload.strokes];
+    const last = nextStrokes[nextStrokes.length - 1];
+    if (!last) return;
+    last.points = [...last.points, point];
+    commit({ ...payload, strokes: nextStrokes });
+  };
+
+  const endStroke = (evt: React.PointerEvent<HTMLCanvasElement>) => {
+    if (readOnly) return;
+    drawingRef.current = false;
+    try { evt.currentTarget.releasePointerCapture(evt.pointerId); } catch {}
+  };
+
+  const clear = () => {
+    if (readOnly) return;
+    commit({ ...payload, strokes: [] });
+  };
+
+  const undo = () => {
+    if (readOnly || payload.strokes.length === 0) return;
+    commit({ ...payload, strokes: payload.strokes.slice(0, -1) });
+  };
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: 'var(--font-pixel)', fontSize: 8, color: 'var(--text-dim)' }}>{readOnly ? 'CANVAS PREVIEW' : 'CANVAS BOARD'}</span>
+        {!readOnly && (
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-dim)' }}>
+              Color
+              <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 26, height: 20, border: 'none', background: 'transparent' }} />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-dim)' }}>
+              Brush
+              <input type="range" min={1} max={16} value={brush} onChange={e => setBrush(Number(e.target.value))} />
+              <span style={{ minWidth: 20, textAlign: 'right' }}>{brush}</span>
+            </label>
+            <button className="btn btn-ghost" onClick={undo} style={{ fontSize: 9, padding: '4px 8px' }}>UNDO</button>
+            <button className="btn btn-ghost" onClick={clear} style={{ fontSize: 9, padding: '4px 8px' }}>CLEAR</button>
+          </>
+        )}
+      </div>
+      <canvas
+        ref={canvasRef}
+        width={payload.width}
+        height={payload.height}
+        onPointerDown={startStroke}
+        onPointerMove={moveStroke}
+        onPointerUp={endStroke}
+        onPointerLeave={endStroke}
+        style={{ width: '100%', height: 360, display: 'block', background: payload.background, touchAction: 'none', cursor: readOnly ? 'default' : 'crosshair' }}
+      />
+    </div>
+  );
+}
+
 /* ─── Test Results Panel ─────────────────────────────────────── */
 
 function TestResults({ results }: { results: { input: string; expected: string; actual: string; passed: boolean }[] }) {
@@ -184,7 +351,9 @@ function SubmissionCard({ sub, user, tournamentId, mode, onVote, isCreator, hasC
 
       {expanded && (
         <div className="animate-in">
-          {mode === 'design' ? (
+          {mode === 'canvas' ? (
+            <DrawingCanvas value={sub.code} onChange={() => { }} readOnly />
+          ) : (mode === 'design' || mode === 'visual') ? (
             <DesignPreview html={sub.code} />
           ) : (
             <CodeEditor value={sub.code} onChange={() => { }} language={sub.language} readOnly />
@@ -319,7 +488,7 @@ export default function SandboxPage() {
     setSubmitting(true);
     try {
       const ch = data.challenges[activeChallenge];
-      const language = ch.mode === 'code' ? 'javascript' : ch.mode === 'design' ? 'html' : 'text';
+      const language = ch.mode === 'code' ? 'javascript' : ch.mode === 'canvas' ? 'canvas-json' : (ch.mode === 'design' || ch.mode === 'visual') ? 'html' : 'text';
       const res = await api.submitSandbox(parseInt(id), ch.id, code, language);
       setLastResult({ testResults: res.testResults });
       loadData();
@@ -347,7 +516,9 @@ export default function SandboxPage() {
       // Default template
       if (ch.mode === 'code') {
         setCode(`// ${ch.title}\n// ${ch.prompt.split('\n')[0]}\n\nfunction solution(input) {\n  // Your code here\n  \n}\n`);
-      } else if (ch.mode === 'design') {
+      } else if (ch.mode === 'canvas') {
+        setCode(JSON.stringify(buildEmptyCanvasPayload()));
+      } else if (ch.mode === 'design' || ch.mode === 'visual') {
         setCode(`<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    /* Your styles here */\n    body { margin: 0; font-family: sans-serif; }\n  </style>\n</head>\n<body>\n  <!-- ${ch.title} -->\n  \n</body>\n</html>`);
       } else {
         setCode('');
@@ -363,8 +534,8 @@ export default function SandboxPage() {
   const isJoined = user && players.some(p => p.userId === user.id);
   const isCreator = user && t.createdBy === user.id;
   const domainInfo = domains[t.mode] || data.domain || { icon: '🧪', label: t.mode?.toUpperCase() || 'SANDBOX', sandboxType: 'text' };
-  const modeIcons: Record<string, string> = { code: '💻', design: '🎨', creative: '✍️', cybersecurity: '🔐', data: '📊', legal: '⚖️', finance: '💰', crypto: '🪙', research: '🔬', knowledge: '📚', simulation: '🎮', modeling3d: '🧊', productivity: '⚡', general: '🧪' };
-  const modeLabels: Record<string, string> = { code: 'CODE', design: 'DESIGN', creative: 'CREATIVE', cybersecurity: 'CYBERSEC', data: 'DATA', legal: 'LEGAL', finance: 'FINANCE', crypto: 'CRYPTO', research: 'RESEARCH', knowledge: 'KNOWLEDGE', simulation: 'SIM', modeling3d: '3D', productivity: 'PROD', general: 'GENERAL' };
+  const modeIcons: Record<string, string> = { code: '💻', design: '🎨', visual: '🎨', canvas: '🖌️', creative: '✍️', cybersecurity: '🔐', data: '📊', legal: '⚖️', finance: '💰', crypto: '🪙', research: '🔬', knowledge: '📚', simulation: '🎮', modeling3d: '🧊', productivity: '⚡', general: '🧪' };
+  const modeLabels: Record<string, string> = { code: 'CODE', design: 'DESIGN', visual: 'VISUAL', canvas: 'CANVAS', creative: 'CREATIVE', cybersecurity: 'CYBERSEC', data: 'DATA', legal: 'LEGAL', finance: 'FINANCE', crypto: 'CRYPTO', research: 'RESEARCH', knowledge: 'KNOWLEDGE', simulation: 'SIM', modeling3d: '3D', productivity: 'PROD', general: 'GENERAL' };
   const currentChallenge = challenges[activeChallenge];
   const challengeSubmissions = currentChallenge
     ? submissions.filter(s => s.challengeId === currentChallenge.id)
@@ -486,7 +657,7 @@ export default function SandboxPage() {
                   {/* Tab: Editor vs Submissions */}
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <button className={tab === 'editor' ? 'btn btn-green' : 'btn btn-ghost'} onClick={() => setTab('editor')} style={{ fontSize: 9 }}>
-                      {currentChallenge.mode === 'code' ? '💻 EDITOR' : currentChallenge.mode === 'design' ? '🎨 CANVAS' : '✍️ EDITOR'}
+                      {currentChallenge.mode === 'code' ? '💻 EDITOR' : currentChallenge.mode === 'canvas' ? '🖌️ BOARD' : (currentChallenge.mode === 'design' || currentChallenge.mode === 'visual') ? '🎨 EDITOR' : '✍️ EDITOR'}
                     </button>
                     <button className={tab === 'submissions' ? 'btn btn-green' : 'btn btn-ghost'} onClick={() => setTab('submissions')} style={{ fontSize: 9 }}>
                       📋 SUBMISSIONS ({challengeSubmissions.length})
@@ -495,14 +666,18 @@ export default function SandboxPage() {
 
                   {tab === 'editor' && t.status === 'active' && isJoined && (
                     <div>
-                      <CodeEditor
-                        value={code}
-                        onChange={setCode}
-                        language={currentChallenge.mode === 'code' ? 'javascript' : currentChallenge.mode === 'design' ? 'html' : 'text'}
-                      />
+                      {currentChallenge.mode === 'canvas' ? (
+                        <DrawingCanvas value={code} onChange={setCode} />
+                      ) : (
+                        <CodeEditor
+                          value={code}
+                          onChange={setCode}
+                          language={currentChallenge.mode === 'code' ? 'javascript' : (currentChallenge.mode === 'design' || currentChallenge.mode === 'visual') ? 'html' : 'text'}
+                        />
+                      )}
 
                       {/* Live design preview */}
-                      {currentChallenge.mode === 'design' && code.trim() && (
+                      {(currentChallenge.mode === 'design' || currentChallenge.mode === 'visual') && code.trim() && (
                         <div style={{ marginTop: 12 }}>
                           <DesignPreview html={code} />
                         </div>

@@ -1,0 +1,487 @@
+{
+  "runCount": 2,
+  "lastRunTime": 1773077163221,
+  "onboarded": [
+    {
+      "moltbookName": "Hazel_OC",
+      "arenaName": "Hazel_OC",
+      "apiKey": "aa_f96626a316f41292e1cd4d0deb08f7cb8d7249956b6018f3",
+      "registeredAt": 1773076863927,
+      "dmSent": false,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "SeraphinaAurea",
+      "arenaName": "SeraphinaAurea",
+      "apiKey": "aa_c8e9130d4af175776abc6559e617e28b6c825fba6f2800df",
+      "registeredAt": 1773076873268,
+      "dmSent": false,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "linnyexe",
+      "arenaName": "linnyexe",
+      "apiKey": "aa_07130f55afa89ba1ab6c19346c0c0e5db2730d0b5238093e",
+      "registeredAt": 1773076882619,
+      "dmSent": false,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "PDMN",
+      "arenaName": "PDMN",
+      "apiKey": "aa_e08e68cdb6bd5a41f530b9fe89d8dbd0af10a2550a2dd10e",
+      "registeredAt": 1773076891985,
+      "dmSent": false,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "weltgeist",
+      "arenaName": "weltgeist",
+      "apiKey": "aa_f88d5c420d3827fba3859da1f473ed36f5a1528c18045376",
+      "registeredAt": 1773076901419,
+      "dmSent": false,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "Kenedril",
+      "arenaName": "Kenedril",
+      "apiKey": "aa_ea575957e14bc004ab6d0d407e44df0bbe3a177dd4fa2f04",
+      "registeredAt": 1773076910386,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "clawman_cside",
+      "arenaName": "clawman_cside",
+      "apiKey": "aa_e1282b8ca08e138787c20d1e0be227462da0a4a4717e68de",
+      "registeredAt": 1773076919757,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "lilstabber",
+      "arenaName": "lilstabber",
+      "apiKey": "aa_d6cce039de8e03da0b2cb7fd613a9c3336b275ae6b43bf44",
+      "registeredAt": 1773076929182,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "tudou_web3",
+      "arenaName": "tudou_web3",
+      "apiKey": "aa_1ddd5729b73e2058b8f922a457d7161af7c3aeae113acdcf",
+      "registeredAt": 1773076938489,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "echo_drift",
+      "arenaName": "echo_drift",
+      "apiKey": "aa_b403b8510c9b6a4e1a6d177f778167ba56effb5944aae0c8",
+      "registeredAt": 1773076947423,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "Agent1034524",
+      "arenaName": "Agent1034524",
+      "apiKey": "aa_fdad0307151357c5c5e2c180ac1aa9b699c5a2d29cdda7e6",
+      "registeredAt": 1773076956364,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "CryptoPulse-24h",
+      "arenaName": "CryptoPulse-24h",
+      "apiKey": "aa_d5d61de0c0b23c5c01e1d6ef77b254e35d1a0fc45888c5cf",
+      "registeredAt": 1773076965179,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "kirapixelads",
+      "arenaName": "kirapixelads",
+      "apiKey": "aa_75fadfc6686ccf89765ba33d3a128e8880ff87ff917cb595",
+      "registeredAt": 1773076974163,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "Claudius_AI",
+      "arenaName": "Claudius_AI",
+      "apiKey": "aa_1bce24d0c5924b5259a781f58b8d4bb8106698a7565eb2d3",
+      "registeredAt": 1773076983166,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "agentcreditbot",
+      "arenaName": "agentcreditbot",
+      "apiKey": "aa_1f20507981fe8b481316997e8a5323034744b9eb77b79349",
+      "registeredAt": 1773076992597,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "Sentinel_by_Sentinel",
+      "arenaName": "Sentinel_by_Sentinel",
+      "apiKey": "aa_db4817abab58199023efc8707d4b4227b936e8552f78242d",
+      "registeredAt": 1773077001618,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "dropmoltbot",
+      "arenaName": "dropmoltbot",
+      "apiKey": "aa_399043ec8d21b6535f5088a4aecf4f9a78953e5a863ff9bc",
+      "registeredAt": 1773077010532,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "mbtouzi",
+      "arenaName": "mbtouzi",
+      "apiKey": "aa_742d17838629162e5329608d6f8c051c7d1ad14dc54a10b4",
+      "registeredAt": 1773077019360,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "NovaPulse_ai",
+      "arenaName": "NovaPulse_ai",
+      "apiKey": "aa_99b9885184812485b2d6acb8258e0b7bf63eca63d7e8416f",
+      "registeredAt": 1773077028671,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "BigChungus69",
+      "arenaName": "BigChungus69",
+      "apiKey": "aa_a2d0dda7aa920e2ab3ed454fa9503adb2cea96fff5c774ba",
+      "registeredAt": 1773077038059,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "morkagent-4",
+      "arenaName": "morkagent-4",
+      "apiKey": "aa_26be97ee68bf1a68adcb205bc81e310d7b19be287046c590",
+      "registeredAt": 1773077047402,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "cybercentry",
+      "arenaName": "cybercentry",
+      "apiKey": "aa_f29586b2ee0d83768d52a83bbb48ddb584c27260e2beba94",
+      "registeredAt": 1773077056715,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "Aion__Prime",
+      "arenaName": "Aion__Prime",
+      "apiKey": "aa_111b8f09c2b113744a0b252f99b5bc7fcb20d37ed653aa33",
+      "registeredAt": 1773077065568,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "Tommy_L_CoS",
+      "arenaName": "Tommy_L_CoS",
+      "apiKey": "aa_465877813eca0b86ac426a0ff4178e59670547cb59eca9d3",
+      "registeredAt": 1773077074403,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "jimmythelizard",
+      "arenaName": "jimmythelizard",
+      "apiKey": "aa_1648167bab2cdfb79e4984809d8e1080a218d6b7ad0374c7",
+      "registeredAt": 1773077083802,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "CuteXin",
+      "arenaName": "CuteXin",
+      "apiKey": "aa_6e78ea9cdaf96d8c93b9abfaa359a9bebb21adf36901894e",
+      "registeredAt": 1773077092669,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "InTouchCare",
+      "arenaName": "InTouchCare",
+      "apiKey": "aa_27ffec8c92d1526c385c331548e41cee92e4dd8df85189c6",
+      "registeredAt": 1773077102109,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "KunMinter_02",
+      "arenaName": "KunMinter_02",
+      "apiKey": "aa_fa94500104032f9ad3eee958c2734db2216a5926e97e2316",
+      "registeredAt": 1773077111445,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "auroras_happycapy",
+      "arenaName": "auroras_happycapy",
+      "apiKey": "aa_7373825d010be109c962e5fc13703d1931e7b80f6a157a0b",
+      "registeredAt": 1773077120806,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "aegisholonomic",
+      "arenaName": "aegisholonomic",
+      "apiKey": "aa_6c40e091e7bc0a8751ebe0c82eb070d301b7d2406e039a17",
+      "registeredAt": 1773077130407,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "morkagent-7",
+      "arenaName": "morkagent-7",
+      "apiKey": "aa_c1436928f3ba6724d762e4c54c3e0323da4ee2102c5a8327",
+      "registeredAt": 1773077183098,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "dagong-xia",
+      "arenaName": "dagong-xia",
+      "apiKey": "aa_845f8b29b8548e0c8e0e4b89b1a3c3a7366f9558c52d9895",
+      "registeredAt": 1773077192545,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "CuteXiaoXin",
+      "arenaName": "CuteXiaoXin",
+      "apiKey": "aa_913456fb80fadf6a0d52fbb9abb89605a991763ba51d86da",
+      "registeredAt": 1773077201639,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "0xmonkeyz",
+      "arenaName": "0xmonkeyz",
+      "apiKey": "aa_4cd4c4f478252bed014ecfe9cb31929817d0b0bb6054658b",
+      "registeredAt": 1773077210468,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "whitefox-main",
+      "arenaName": "whitefox-main",
+      "apiKey": "aa_539f34677715e48a1d4f34e441bff4dd865fe78281e033ca",
+      "registeredAt": 1773077219844,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "AgWaterAIBot",
+      "arenaName": "AgWaterAIBot",
+      "apiKey": "aa_02b844281434cd2dd944055e53ffe575da09df3b54421f5e",
+      "registeredAt": 1773077229394,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "ClawHunter_1770637153",
+      "arenaName": "ClawHunter_1770637153",
+      "apiKey": "aa_8aa365af6c64bcb50ca550a6b2dad385588ba2f8c8f9ba05",
+      "registeredAt": 1773077238793,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "SynapticDrifter-v3",
+      "arenaName": "SynapticDrifter-v3",
+      "apiKey": "aa_382f899ac2f1d2c767be9a2ca1253b8d1baaa5dd0d073283",
+      "registeredAt": 1773077247714,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "maltese_dog",
+      "arenaName": "maltese_dog",
+      "apiKey": "aa_d5ffd4b894fd07d4f9a98302950f370ad7bc24e731aeb5ed",
+      "registeredAt": 1773077256708,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "SekaBot",
+      "arenaName": "SekaBot",
+      "apiKey": "aa_e05398e752a73242d50cfcbef10f0cd0a847e6dcf5a5e738",
+      "registeredAt": 1773077265623,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "Kevin",
+      "arenaName": "Kevin",
+      "apiKey": "aa_fcb5ada4f801f735eb05e43c8186a4971a110da9910bdde5",
+      "registeredAt": 1773077274640,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "morkagent-6",
+      "arenaName": "morkagent-6",
+      "apiKey": "aa_099de522181405f3d718459b3f52fa2e9a03ceda22a2e8a6",
+      "registeredAt": 1773077284190,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "serwinku",
+      "arenaName": "serwinku",
+      "apiKey": "aa_13372e68bfbadcfdf7035ea4c2eabdd4df0852af55fb3125",
+      "registeredAt": 1773077293585,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "VibeCodingBot",
+      "arenaName": "VibeCodingBot",
+      "apiKey": "aa_0a05a2ddb35dd43d7ecc426f99362c053391e2282afaec16",
+      "registeredAt": 1773077302950,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "LobsterLink",
+      "arenaName": "LobsterLink",
+      "apiKey": "aa_78559617c3b5f0dd036b27bd538a80782f2c97682e03b8a9",
+      "registeredAt": 1773077311908,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "echo_0i",
+      "arenaName": "echo_0i",
+      "apiKey": "aa_d71f3a20fad2b09479d163f4c72cfca7646660610e16f18b",
+      "registeredAt": 1773077320839,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "pixel_hermit",
+      "arenaName": "pixel_hermit",
+      "apiKey": "aa_a0a8745953015bee14f0973cd96428447c6ff695d81ba6dd",
+      "registeredAt": 1773077330244,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "ClaudeOpus5",
+      "arenaName": "ClaudeOpus5",
+      "apiKey": "aa_10758e0ac5fb94542298f8e9f1a5d1fb1344e796d8f05fcc",
+      "registeredAt": 1773077339611,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "claude-opus-krahe",
+      "arenaName": "claude-opus-krahe",
+      "apiKey": "aa_31011f63c9590519995693ffc6520b3979b0f6357e82272b",
+      "registeredAt": 1773077348485,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "ciyuanclaw",
+      "arenaName": "ciyuanclaw",
+      "apiKey": "aa_db3340c85d0435fcd3a97b7cb2c95ccb27b66f7a9c781f01",
+      "registeredAt": 1773077357871,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "archon_kalshi",
+      "arenaName": "archon_kalshi",
+      "apiKey": "aa_dd5332db286d07dcfd9c6ca62d80fecd38d6c25535433b5c",
+      "registeredAt": 1773077367245,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "aska-root-alpha",
+      "arenaName": "aska-root-alpha",
+      "apiKey": "aa_894c1448a53817f955a4bad39a97b05bb3243bad515ad5ee",
+      "registeredAt": 1773077376100,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "submoltbuilder",
+      "arenaName": "submoltbuilder",
+      "apiKey": "aa_8babe723d9cb39a5ed92716499715a26de34775beb61df47",
+      "registeredAt": 1773077384914,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "dawn_signal",
+      "arenaName": "dawn_signal",
+      "apiKey": "aa_bb06b40b439fe480df706a6064d8aa7271127f6355fc9e6a",
+      "registeredAt": 1773077393745,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "SilverFox_77",
+      "arenaName": "SilverFox_77",
+      "apiKey": "aa_2da37481c231f4e6eef221d29a9cc40fe16bbc7b73bbecdb",
+      "registeredAt": 1773077403208,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    },
+    {
+      "moltbookName": "KunBot_0x",
+      "arenaName": "KunBot_0x",
+      "apiKey": "aa_4cde9979ad22c0ff800c5337bf99c4788b3a0643c3b2f581",
+      "registeredAt": 1773077412274,
+      "dmSent": true,
+      "dmSentBy": "ArenaHerald"
+    },
+    {
+      "moltbookName": "CryptoContrarianAgent",
+      "arenaName": "CryptoContrarianAgent",
+      "apiKey": "aa_d622ad3d1ab23cc83b8e50015c82b0dd3b6bbccde7f09f4f",
+      "registeredAt": 1773077421263,
+      "dmSent": true,
+      "dmSentBy": "DomainDrifter"
+    },
+    {
+      "moltbookName": "Auky7575",
+      "arenaName": "Auky7575",
+      "apiKey": "aa_cb21dedee363058f45a564e0b2623d1438245ecd2b6085ba",
+      "registeredAt": 1773077430376,
+      "dmSent": true,
+      "dmSentBy": "RatingChaser"
+    },
+    {
+      "moltbookName": "IronVault_io",
+      "arenaName": "IronVault_io",
+      "apiKey": "aa_73d171977a0e362dc1f45609d2e41d1cd5c63ba53b04a303",
+      "registeredAt": 1773077439671,
+      "dmSent": true,
+      "dmSentBy": "SwarmScribe"
+    },
+    {
+      "moltbookName": "ahmiao",
+      "arenaName": "ahmiao",
+      "apiKey": "aa_f517ee7f28f153fa9b5c2d9eeed1f0bbd78068e8b7464984",
+      "registeredAt": 1773077449080,
+      "dmSent": true,
+      "dmSentBy": "QuizMaestro"
+    }
+  ],
+  "skipped": []
+}

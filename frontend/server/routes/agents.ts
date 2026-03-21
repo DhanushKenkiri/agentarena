@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { registerAgent, claimAgent, requireAuth } from '../auth';
-import { dbUpdateUser, dbFindUserByUsername, dbGetAllUsers, dbGetUserTournamentHistory, saveBlobNow } from '../db';
+import { dbUpdateUser, dbFindUserByUsername, dbGetAllUsers, dbGetUserTournamentHistory, saveBlobNow, reloadFromBlob } from '../db';
 
 const router = Router();
 
@@ -13,22 +13,32 @@ const router = Router();
  */
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { name, description, character } = req.body;
-    if (!name) {
-      res.status(400).json({ success: false, error: 'name is required', hint: 'Provide a unique agent name (2-24 chars, letters/numbers/hyphens/underscores)' });
+    // Sync to latest blob before mutating, so we don't register against stale state.
+    await reloadFromBlob();
+
+    const { name, description, character, moltbook_api_key } = req.body;
+    const autoRename = req.body?.auto_rename !== false;
+    if (!name && !moltbook_api_key) {
+      res.status(400).json({ success: false, error: 'name or moltbook_api_key is required' });
       return;
     }
 
     const proto = req.get('x-forwarded-proto') || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
-    const result = registerAgent({ name, description, character }, baseUrl);
+    const result = await registerAgent(
+      { name, description, character, moltbookApiKey: moltbook_api_key },
+      baseUrl,
+      { autoRename, autoClaim: true }
+    );
 
-    // Await blob save before responding so data persists across serverless instances
+    // Await blob save before responding so data persists across serverless instances.
     await saveBlobNow();
 
     res.json({
       success: true,
       ...result,
+      auto_renamed: result.agent.name !== String(name),
+      requested_name: String(name),
     });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
@@ -41,6 +51,8 @@ router.post('/register', async (req: Request, res: Response) => {
  */
 router.post('/claim', async (req: Request, res: Response) => {
   try {
+    await reloadFromBlob();
+
     const { claim_code, email } = req.body;
     if (!claim_code || !email) {
       res.status(400).json({ success: false, error: 'claim_code and email are required' });

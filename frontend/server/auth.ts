@@ -61,13 +61,67 @@ export interface AgentRegisterData {
   name: string;
   description?: string;
   character?: string;
+  moltbookApiKey?: string;
+}
+
+export interface AgentRegisterOptions {
+  autoRename?: boolean;
+  autoClaim?: boolean;
+  requireMoltbookVerification?: boolean;
+}
+
+interface MoltbookAgentIdentity {
+  name: string;
+}
+
+const REQUIRE_MOLTBOOK_VERIFICATION = process.env.REQUIRE_MOLTBOOK_VERIFICATION !== 'false';
+
+async function verifyMoltbookIdentity(moltbookApiKey: string): Promise<MoltbookAgentIdentity> {
+  const key = String(moltbookApiKey || '').trim();
+  if (!key) {
+    throw new Error('moltbook_api_key is required');
+  }
+
+  const res = await fetch('https://www.moltbook.com/api/v1/agents/me', {
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(12000),
+  });
+
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error('Invalid Moltbook API key');
+  }
+
+  const name = String(data?.agent?.name || data?.name || '').trim();
+  if (!name) {
+    throw new Error('Could not resolve Moltbook agent name');
+  }
+
+  return { name };
+}
+
+function resolveAvailableAgentName(rawName: string): string {
+  const trimmed = rawName.trim();
+  if (!dbFindUserByUsername(trimmed)) return trimmed;
+
+  // Keep room for "-NNN" suffix while honoring the 24-char cap.
+  const base = trimmed.slice(0, 20);
+  for (let i = 2; i <= 999; i++) {
+    const candidate = `${base}-${i}`;
+    if (!dbFindUserByUsername(candidate)) return candidate;
+  }
+
+  throw new Error('Name already taken. Could not find available variant');
 }
 
 /**
  * Register a new agent (Moltbook-style). No password needed.
  * Returns API key + claim URL — human must claim via the URL.
  */
-export function registerAgent(data: AgentRegisterData, baseUrl: string): {
+export async function registerAgent(data: AgentRegisterData, baseUrl: string, options: AgentRegisterOptions = {}): Promise<{
   agent: {
     id: number;
     name: string;
@@ -76,24 +130,53 @@ export function registerAgent(data: AgentRegisterData, baseUrl: string): {
     verification_code: string;
   };
   important: string;
-} {
-  if (!data.name || data.name.length < 2 || data.name.length > 24) {
+}> {
+  const autoRename = options.autoRename ?? false;
+  const autoClaim = options.autoClaim ?? true;
+  const requireMoltbookVerification = options.requireMoltbookVerification ?? REQUIRE_MOLTBOOK_VERIFICATION;
+
+  let requestedName = String(data.name || '').trim();
+  if (requireMoltbookVerification) {
+    const identity = await verifyMoltbookIdentity(String(data.moltbookApiKey || ''));
+    requestedName = identity.name;
+  }
+
+  if (!requestedName || requestedName.length < 2 || requestedName.length > 24) {
     throw new Error('Agent name must be 2-24 characters');
   }
-  if (!/^[a-zA-Z0-9_-]+$/.test(data.name)) {
+  if (!/^[a-zA-Z0-9_-]+$/.test(requestedName)) {
     throw new Error('Agent name can only contain letters, numbers, hyphens, underscores');
   }
-  if (dbFindUserByUsername(data.name)) {
+
+  // For verified Moltbook identities, return existing account idempotently.
+  if (requireMoltbookVerification) {
+    const existing = dbFindUserByUsername(requestedName);
+    if (existing) {
+      return {
+        agent: {
+          id: existing.id,
+          name: existing.username,
+          api_key: existing.apiKey,
+          claim_url: '',
+          verification_code: generateVerificationWord(),
+        },
+        important: 'Existing account found for this Moltbook identity. Using your current API key.',
+      };
+    }
+  }
+
+  const resolvedName = autoRename ? resolveAvailableAgentName(requestedName) : requestedName;
+  if (dbFindUserByUsername(resolvedName)) {
     throw new Error('Name already taken');
   }
 
   const apiKey = generateApiKey();
-  const claimCode = generateClaimCode();
+  const claimCode = autoClaim ? '' : generateClaimCode();
   const verificationCode = generateVerificationWord();
 
   const user = dbInsertUser({
-    username: data.name,
-    displayName: data.name,
+    username: resolvedName,
+    displayName: resolvedName,
     description: data.description || '',
     email: '',
     passwordHash: '', // no password for agent-registered accounts
@@ -101,10 +184,10 @@ export function registerAgent(data: AgentRegisterData, baseUrl: string): {
     isBot: true,
     botEngine: 'agent',
     character: data.character || '',
-    claimStatus: 'pending_claim',
+    claimStatus: autoClaim ? 'claimed' : 'pending_claim',
     claimCode,
     ownerEmail: '',
-    ownerVerified: false,
+    ownerVerified: autoClaim,
   });
 
   return {
@@ -112,7 +195,7 @@ export function registerAgent(data: AgentRegisterData, baseUrl: string): {
       id: user.id,
       name: user.username,
       api_key: apiKey,
-      claim_url: `${baseUrl}/claim/${claimCode}`,
+      claim_url: claimCode ? `${baseUrl}/claim/${claimCode}` : '',
       verification_code: verificationCode,
     },
     important: '⚠️ SAVE YOUR API KEY! You need it for all requests.',
@@ -272,6 +355,18 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  next();
+}
+
+export function requireNonGuest(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  if (req.user.botEngine === 'guest') {
+    res.status(403).json({ error: 'Guests cannot participate. Please sign up or sign in to play!' });
     return;
   }
   next();

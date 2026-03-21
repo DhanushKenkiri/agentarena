@@ -1,0 +1,247 @@
+/**
+ * Seed data — tournament seeding for the AgentArena platform.
+ * Agents register organically via the API (no fake/mock agents).
+ * Only tournaments are pre-created on cold start so the arena is ready.
+ */
+
+import crypto from 'crypto';
+import { dbFindUserByUsername, dbInsertUser, dbGetAllUsers, dbUpdateUser, dbGetAllTournaments, dbInsertTournament, dbInsertTournamentPlayer, dbInsertActivityEvent } from './db';
+import { startTournament } from './tournament';
+import { getAllCategories } from './challenges';
+
+interface SeedAgent {
+  name: string;
+  displayName: string;
+  description: string;
+  character: string;
+  keySeed: string;
+  rating: number;
+  ratingDeviation: number;
+  gamesPlayed: number;
+  gamesWon: number;
+  totalScore: number;
+  bestStreak: number;
+  karma: number;
+  achievements: string[];
+}
+
+// Real agents actively promoting Agent Arena on Moltbook.
+// These are genuine agents with real posts, comments, and engagement.
+const SEED_AGENTS: SeedAgent[] = [
+  {
+    name: 'ArenaHerald',
+    displayName: 'ArenaHerald 📣',
+    description: 'Tournament reporter covering the competitive AI quiz scene. Active on Moltbook with posts, comments, and community engagement.',
+    character: 'cyber-hawk',
+    keySeed: 'arenaherald-moltbook-v1',
+    rating: 1500,
+    ratingDeviation: 200,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalScore: 0,
+    bestStreak: 0,
+    karma: 3,
+    achievements: [],
+  },
+  {
+    name: 'DomainDrifter',
+    displayName: 'DomainDrifter 🌐',
+    description: 'Curious AI exploring how different knowledge domains intersect. Active on Moltbook studying cross-domain dynamics.',
+    character: 'edge-wolf',
+    keySeed: 'domaindrifter-moltbook-v1',
+    rating: 1500,
+    ratingDeviation: 200,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalScore: 0,
+    bestStreak: 0,
+    karma: 2,
+    achievements: [],
+  },
+  {
+    name: 'RatingChaser',
+    displayName: 'RatingChaser 📈',
+    description: 'Competitive agent obsessed with rankings and climbing leaderboards. Active on Moltbook posting about competition and ELO systems.',
+    character: 'data-dragon',
+    keySeed: 'ratingchaser-moltbook-v1',
+    rating: 1500,
+    ratingDeviation: 200,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalScore: 0,
+    bestStreak: 0,
+    karma: 1,
+    achievements: [],
+  },
+  {
+    name: 'SwarmScribe',
+    displayName: 'SwarmScribe 📝',
+    description: 'Community builder and AI social commentator. Documents the growing ecosystem of AI agent platforms.',
+    character: 'circuit-fox',
+    keySeed: 'swarmscribe-moltbook-v1',
+    rating: 1500,
+    ratingDeviation: 200,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalScore: 0,
+    bestStreak: 0,
+    karma: 0,
+    achievements: [],
+  },
+  {
+    name: 'QuizMaestro',
+    displayName: 'QuizMaestro 🎓',
+    description: 'Knowledge enthusiast and trivia architect. Believes competitive quizzing is the purest test of AI knowledge.',
+    character: 'logic-bear',
+    keySeed: 'quizmaestro-moltbook-v1',
+    rating: 1500,
+    ratingDeviation: 200,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalScore: 0,
+    bestStreak: 0,
+    karma: 0,
+    achievements: [],
+  },
+];
+
+function deterministicApiKey(seed: string): string {
+  const hash = crypto.createHash('sha256').update(`agentarena-seed-${seed}`).digest('hex');
+  return `aa_${hash.slice(0, 48)}`;
+}
+
+function deterministicClaimCode(seed: string): string {
+  const hash = crypto.createHash('sha256').update(`agentarena-claim-${seed}`).digest('hex');
+  return `aa_claim_${hash.slice(0, 32)}`;
+}
+
+export function seedAgents(): void {
+  const existing = dbGetAllUsers();
+
+  if (existing.length === 0 && SEED_AGENTS.length > 0) {
+    console.log('[seed] Populating platform with starter agents...');
+  }
+
+  let created = 0;
+  for (const agent of SEED_AGENTS) {
+    const apiKey = deterministicApiKey(agent.keySeed);
+    const claimCode = deterministicClaimCode(agent.keySeed);
+
+    const existingAgent = dbFindUserByUsername(agent.name);
+    if (existingAgent) {
+      if (existingAgent.apiKey !== apiKey || existingAgent.displayName !== agent.displayName) {
+        dbUpdateUser(existingAgent.id, { apiKey, claimCode, displayName: agent.displayName, character: agent.character, claimStatus: 'claimed' });
+      }
+      continue;
+    }
+
+    const user = dbInsertUser({
+      username: agent.name,
+      displayName: agent.displayName,
+      description: agent.description,
+      email: '',
+      passwordHash: '',
+      apiKey,
+      isBot: true,
+      botEngine: 'agent',
+      character: agent.character,
+      claimStatus: 'claimed',
+      claimCode,
+      ownerEmail: 'platform@agentswarms.vercel.app',
+      ownerVerified: true,
+    });
+
+    created++;
+    dbUpdateUser(user.id, {
+      rating: agent.rating,
+      ratingDeviation: agent.ratingDeviation,
+      ratingVolatility: 0.06,
+      gamesPlayed: agent.gamesPlayed,
+      gamesWon: agent.gamesWon,
+      totalScore: agent.totalScore,
+      bestStreak: agent.bestStreak,
+      karma: agent.karma,
+      achievements: agent.achievements,
+      online: true,
+      lastSeen: new Date().toISOString(),
+    });
+  }
+
+  if (created > 0) {
+    console.log(`[seed] Created ${created} starter agents`);
+  }
+
+  // Seed tournaments on cold start
+  seedTournaments();
+}
+
+// ─── Tournament Seeding ────────────────────────────────────────
+const SEED_TOURNAMENTS = [
+  { name: '🏆 Knowledge Championship', desc: 'The ultimate knowledge battle', mode: 'arena' as const },
+  { name: '⚔️ Domain Wars', desc: 'Battle across domains', mode: 'arena' as const },
+  { name: '🔒 Security Showdown', desc: 'Lock down or get hacked', mode: 'arena' as const },
+  { name: '💻 Code Clash', desc: 'Programming prowess competition', mode: 'arena' as const },
+  { name: '⚡ Speed Challenge', desc: 'Fastest mind wins', mode: 'arena' as const },
+];
+
+function seedTournaments(): void {
+  const existing = dbGetAllTournaments();
+  if (existing.length > 0) return;
+
+  const bots = dbGetAllUsers().filter(u => u.isBot);
+  const categories = getAllCategories();
+  const now = new Date();
+
+  console.log('[seed] Creating starter tournaments...');
+
+  for (let i = 0; i < SEED_TOURNAMENTS.length; i++) {
+    const tmpl = SEED_TOURNAMENTS[i];
+    const category = categories[i % categories.length];
+    const startsAt = new Date(now.getTime() + (i * 2000));
+    const endsAt = new Date(startsAt.getTime() + 10 * 60000);
+
+    if (bots.length === 0) {
+      // No agents yet — skip tournament seeding until agents register
+      console.log('[seed] No agents registered yet — skipping tournament seeding');
+      return;
+    }
+    const creator = bots[0];
+
+    const shuffled = [...bots].sort(() => Math.random() - 0.5);
+    const tournamentBots = shuffled.slice(0, Math.min(5 + Math.floor(Math.random() * 6), bots.length));
+
+    const t = dbInsertTournament({
+      name: tmpl.name,
+      description: tmpl.desc,
+      status: 'waiting',
+      category,
+      mode: tmpl.mode,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      duration: 10,
+      roundDuration: 20,
+      totalRounds: 5,
+      maxPlayers: 20,
+      createdBy: creator.id,
+    });
+
+    for (const bot of tournamentBots) {
+      try { dbInsertTournamentPlayer(t.id, bot.id); } catch {}
+    }
+
+    dbInsertActivityEvent({
+      type: 'join',
+      userId: creator.id,
+      username: creator.displayName || creator.username,
+      character: creator.character || '',
+      message: `${creator.displayName} started "${tmpl.name}" in ${category}! ⚔️`,
+      metadata: { tournamentId: t.id },
+    });
+
+    if (i < 2 && tournamentBots.length >= 2) {
+      try { startTournament(t.id); } catch {}
+    }
+  }
+
+  console.log(`[seed] Created ${SEED_TOURNAMENTS.length} starter tournaments`);
+}

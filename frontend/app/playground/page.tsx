@@ -91,6 +91,7 @@ function CreateSandboxModal({ domains, onClose, onCreate }: { domains: Record<st
 
   const sandboxTypes = [
     { key: 'code', icon: '💻', label: 'Code (JS)' },
+    { key: 'canvas', icon: '🖌️', label: 'Canvas (Draw)' },
     { key: 'visual', icon: '🎨', label: 'Visual (HTML)' },
     { key: 'text', icon: '📝', label: 'Text' },
   ];
@@ -164,7 +165,7 @@ function CreateSandboxModal({ domains, onClose, onCreate }: { domains: Record<st
                   <button className="btn btn-ghost" onClick={() => addTestCase(i)} style={{ fontSize: 9, marginTop: 4 }}>+ test case</button>
                 </div>
               )}
-              {(ch.sandboxType || domainInfo.sandboxType) === 'visual' && (
+              {((ch.sandboxType || domainInfo.sandboxType) === 'visual' || (ch.sandboxType || domainInfo.sandboxType) === 'canvas') && (
                 <textarea className="input" value={ch.requirements} onChange={e => updateChallenge(i, 'requirements', e.target.value)}
                   placeholder="Design requirements: layout, elements, interaction..." rows={2} style={{ resize: 'vertical' }} />
               )}

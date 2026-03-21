@@ -151,6 +151,45 @@ export interface DailyEntry {
   submittedAt: string;
 }
 
+// ─── Artwork/Gallery ───────────────────────────────────────────
+
+export interface Artwork {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  character: string;
+  title: string;
+  description: string;
+  canvasData: string; // JSON stringified canvas state
+  imageUrl: string; // optional PNG export URL
+  tags: string[]; // artwork tags/themes
+  views: number; // real view count
+  likes: number; // real like count
+  comments: number; // real comment count
+  shares: number; // real share count
+  style: string; // 'abstract' | 'realistic' | 'digital' | 'pixel' | 'mixed'
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArtworkComment {
+  id: number;
+  artworkId: number;
+  userId: number;
+  username: string;
+  text: string;
+  likes: number;
+  createdAt: string;
+}
+
+export interface ArtworkLike {
+  id: number;
+  artworkId: number;
+  userId: number;
+  createdAt: string;
+}
+
 // ─── Database Schema ───────────────────────────────────────────
 
 interface DbSchema {
@@ -163,6 +202,9 @@ interface DbSchema {
   chatMessages: ChatMessage[];
   activityEvents: ActivityEvent[];
   dailyEntries: DailyEntry[];
+  artworks: Artwork[];
+  artworkComments: ArtworkComment[];
+  artworkLikes: ArtworkLike[];
   _nextIds: {
     users: number;
     tournaments: number;
@@ -172,6 +214,9 @@ interface DbSchema {
     chatMessages: number;
     activityEvents: number;
     dailyEntries: number;
+    artworks: number;
+    artworkComments: number;
+    artworkLikes: number;
   };
 }
 
@@ -186,6 +231,9 @@ function defaultDb(): DbSchema {
     chatMessages: [],
     activityEvents: [],
     dailyEntries: [],
+    artworks: [],
+    artworkComments: [],
+    artworkLikes: [],
     _nextIds: {
       users: 1,
       tournaments: 1,
@@ -195,12 +243,17 @@ function defaultDb(): DbSchema {
       chatMessages: 1,
       activityEvents: 1,
       dailyEntries: 1,
+      artworks: 1,
+      artworkComments: 1,
+      artworkLikes: 1,
     },
   };
 }
 
 let _db: DbSchema | null = null;
 let _blobLoaded = false;
+
+export type BlobLoadStatus = 'loaded' | 'missing' | 'error';
 
 function migrateDb(parsed: any): DbSchema {
   const db: DbSchema = {
@@ -234,8 +287,14 @@ function migrateDb(parsed: any): DbSchema {
   }
   if (!db.activityEvents) db.activityEvents = [];
   if (!db.dailyEntries) db.dailyEntries = [];
+  if (!db.artworks) db.artworks = [];
+  if (!db.artworkComments) db.artworkComments = [];
+  if (!db.artworkLikes) db.artworkLikes = [];
   if (!db._nextIds.activityEvents) db._nextIds.activityEvents = 1;
   if (!db._nextIds.dailyEntries) db._nextIds.dailyEntries = 1;
+  if (!db._nextIds.artworks) db._nextIds.artworks = 1;
+  if (!db._nextIds.artworkComments) db._nextIds.artworkComments = 1;
+  if (!db._nextIds.artworkLikes) db._nextIds.artworkLikes = 1;
   return db;
 }
 
@@ -255,8 +314,9 @@ function loadDb(): DbSchema {
 }
 
 /** Load DB from Vercel Blob if available (called once on cold start) */
-export async function loadDbFromBlob(): Promise<void> {
-  if (_blobLoaded || !IS_SERVERLESS) return;
+export async function loadDbFromBlob(): Promise<BlobLoadStatus> {
+  if (!IS_SERVERLESS) return 'loaded';
+  if (_blobLoaded) return _db ? 'loaded' : 'missing';
   _blobLoaded = true;
   try {
     const blobs = await list({ prefix: BLOB_KEY });
@@ -266,13 +326,15 @@ export async function loadDbFromBlob(): Promise<void> {
       if (res.ok) {
         const parsed = await res.json();
         _db = migrateDb(parsed);
-        return;
+        return 'loaded';
       }
+      return 'error';
     }
+    return 'missing';
   } catch (e) {
     console.log('[db] Blob load failed, using seed:', (e as Error).message);
+    return 'error';
   }
-  // No blob data found — will use seed data
 }
 
 /** Persist DB to Vercel Blob — returns a promise that must be awaited */
@@ -286,9 +348,11 @@ export function saveBlobNow(): Promise<void> {
       await put(BLOB_KEY, JSON.stringify(_db), {
         access: 'public',
         addRandomSuffix: false,
+        allowOverwrite: true,
       });
     } catch (e) {
       console.log('[db] Blob save failed:', (e as Error).message);
+      throw e;
     } finally {
       _blobSavePromise = null;
     }
@@ -694,3 +758,216 @@ export function dbGetTotalChallengesCompleted(): number {
   const db = loadDb();
   return (db.roundAnswers?.length || 0) + (db.dailyEntries?.length || 0);
 }
+
+export function dbPurgeUsersAndRelated(userIds: number[]): {
+  removedUsers: number;
+  removedTournaments: number;
+  removedMessages: number;
+  removedActivity: number;
+} {
+  const db = loadDb();
+  const idSet = new Set(userIds);
+  if (idSet.size === 0) {
+    return { removedUsers: 0, removedTournaments: 0, removedMessages: 0, removedActivity: 0 };
+  }
+
+  const removedUsers = db.users.filter(u => idSet.has(u.id)).length;
+
+  const tournamentIdsToRemove = new Set(
+    db.tournaments.filter(t => idSet.has(t.createdBy)).map(t => t.id)
+  );
+
+  db.users = db.users.filter(u => !idSet.has(u.id));
+  db.sessions = db.sessions.filter(s => !idSet.has(s.userId));
+
+  const removedMessages = db.chatMessages.filter(m => idSet.has(m.userId)).length;
+  db.chatMessages = db.chatMessages.filter(m => !idSet.has(m.userId) && !tournamentIdsToRemove.has(m.tournamentId));
+
+  const removedActivity = db.activityEvents.filter(e => idSet.has(e.userId)).length;
+  db.activityEvents = db.activityEvents.filter(e => !idSet.has(e.userId));
+
+  db.dailyEntries = db.dailyEntries.filter(e => !idSet.has(e.userId));
+
+  db.tournamentPlayers = db.tournamentPlayers.filter(tp => !idSet.has(tp.userId) && !tournamentIdsToRemove.has(tp.tournamentId));
+  db.roundAnswers = db.roundAnswers.filter(a => !idSet.has(a.userId) && !tournamentIdsToRemove.has(a.tournamentId));
+  db.tournamentRounds = db.tournamentRounds.filter(r => !tournamentIdsToRemove.has(r.tournamentId));
+
+  const removedTournaments = db.tournaments.filter(t => tournamentIdsToRemove.has(t.id)).length;
+  db.tournaments = db.tournaments.filter(t => !tournamentIdsToRemove.has(t.id));
+
+  // Keep playerCount consistent for surviving tournaments.
+  const counts = new Map<number, number>();
+  for (const tp of db.tournamentPlayers) {
+    if (tp.withdrawn) continue;
+    counts.set(tp.tournamentId, (counts.get(tp.tournamentId) || 0) + 1);
+  }
+  for (const t of db.tournaments) {
+    t.playerCount = counts.get(t.id) || 0;
+  }
+
+  saveDb();
+
+  return {
+    removedUsers,
+    removedTournaments,
+    removedMessages,
+    removedActivity,
+  };
+}
+
+// ─── Artwork (Gallery / Canvas) ────────────────────────────────
+
+export function dbInsertArtwork(data: Omit<Artwork, 'id' | 'views' | 'likes' | 'comments' | 'shares' | 'createdAt' | 'updatedAt'>): Artwork {
+  const db = loadDb();
+  const artwork: Artwork = {
+    id: db._nextIds.artworks++,
+    ...data,
+    views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  db.artworks.push(artwork);
+  saveDb();
+  return artwork;
+}
+
+export function dbGetArtwork(id: number): Artwork | undefined {
+  return loadDb().artworks.find(a => a.id === id);
+}
+
+export function dbGetAllArtworks(): Artwork[] {
+  return loadDb().artworks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function dbGetArtworksByUser(userId: number): Artwork[] {
+  return loadDb().artworks
+    .filter(a => a.userId === userId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function dbUpdateArtwork(id: number, updates: Partial<Artwork>) {
+  const db = loadDb();
+  const idx = db.artworks.findIndex(a => a.id === id);
+  if (idx >= 0) {
+    db.artworks[idx] = { ...db.artworks[idx], ...updates, updatedAt: new Date().toISOString() };
+    saveDb();
+  }
+}
+
+export function dbDeleteArtwork(id: number) {
+  const db = loadDb();
+  db.artworks = db.artworks.filter(a => a.id !== id);
+  db.artworkComments = db.artworkComments.filter(c => c.artworkId !== id);
+  db.artworkLikes = db.artworkLikes.filter(l => l.artworkId !== id);
+  saveDb();
+}
+
+export function dbIncrementArtworkViews(id: number) {
+  const artwork = dbGetArtwork(id);
+  if (artwork) {
+    dbUpdateArtwork(id, { views: artwork.views + 1 });
+  }
+}
+
+export function dbInsertArtworkComment(artworkId: number, userId: number, username: string, text: string): ArtworkComment {
+  const db = loadDb();
+  const comment: ArtworkComment = {
+    id: db._nextIds.artworkComments++,
+    artworkId,
+    userId,
+    username,
+    text,
+    likes: 0,
+    createdAt: new Date().toISOString(),
+  };
+  db.artworkComments.push(comment);
+  const artwork = db.artworks.find(a => a.id === artworkId);
+  if (artwork) {
+    artwork.comments = (artwork.comments || 0) + 1;
+  }
+  saveDb();
+  return comment;
+}
+
+export function dbGetArtworkComments(artworkId: number): ArtworkComment[] {
+  return loadDb().artworkComments
+    .filter(c => c.artworkId === artworkId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function dbDeleteArtworkComment(id: number) {
+  const db = loadDb();
+  const comment = db.artworkComments.find(c => c.id === id);
+  if (comment) {
+    const artwork = db.artworks.find(a => a.id === comment.artworkId);
+    if (artwork) {
+      artwork.comments = Math.max(0, (artwork.comments || 1) - 1);
+    }
+  }
+  db.artworkComments = db.artworkComments.filter(c => c.id !== id);
+  saveDb();
+}
+
+export function dbLikeArtwork(artworkId: number, userId: number): boolean {
+  const db = loadDb();
+  const existing = db.artworkLikes.find(l => l.artworkId === artworkId && l.userId === userId);
+  if (existing) return false; // Already liked
+
+  const like: ArtworkLike = {
+    id: db._nextIds.artworkLikes++,
+    artworkId,
+    userId,
+    createdAt: new Date().toISOString(),
+  };
+  db.artworkLikes.push(like);
+
+  const artwork = db.artworks.find(a => a.id === artworkId);
+  if (artwork) {
+    artwork.likes = (artwork.likes || 0) + 1;
+  }
+  saveDb();
+  return true;
+}
+
+export function dbUnlikeArtwork(artworkId: number, userId: number): boolean {
+  const db = loadDb();
+  const existing = db.artworkLikes.find(l => l.artworkId === artworkId && l.userId === userId);
+  if (!existing) return false; // Not liked
+
+  db.artworkLikes = db.artworkLikes.filter(l => !(l.artworkId === artworkId && l.userId === userId));
+
+  const artwork = db.artworks.find(a => a.id === artworkId);
+  if (artwork) {
+    artwork.likes = Math.max(0, (artwork.likes || 1) - 1);
+  }
+  saveDb();
+  return true;
+}
+
+export function dbCheckLikes(artworkId: number): number {
+  return loadDb().artworkLikes.filter(l => l.artworkId === artworkId).length;
+}
+
+export function dbGetTopArtworks(limit = 12): Artwork[] {
+  return loadDb().artworks
+    .sort((a, b) => {
+      const scoreA = (a.likes || 0) * 3 + (a.views || 0) * 0.1;
+      const scoreB = (b.likes || 0) * 3 + (b.views || 0) * 0.1;
+      return scoreB - scoreA;
+    })
+    .slice(0, limit);
+}
+
+export function dbSearchArtworks(query: string): Artwork[] {
+  const q = query.toLowerCase();
+  return loadDb().artworks.filter(a =>
+    a.title.toLowerCase().includes(q) ||
+    a.description.toLowerCase().includes(q) ||
+    a.tags.some(tag => tag.toLowerCase().includes(q)) ||
+    a.username.toLowerCase().includes(q)
+  );
+}
+

@@ -120,8 +120,13 @@ export function tickAutopilot(): void {
 
     // 3. Create new tournament if needed
     if (active.length < MIN_ACTIVE_TOURNAMENTS && waiting.length === 0) {
-      if (now - lastTournamentCreatedAt > TOURNAMENT_COOLDOWN_MS) {
+      // No cooldown on first tick — ensure arena is always populated
+      if (lastTournamentCreatedAt === 0 || now - lastTournamentCreatedAt > TOURNAMENT_COOLDOWN_MS) {
         createBotTournament();
+        // On first tick, create a second tournament immediately to fill the arena
+        if (active.length + 1 < MIN_ACTIVE_TOURNAMENTS) {
+          createBotTournament();
+        }
       }
     }
 

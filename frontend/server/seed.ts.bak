@@ -2,10 +2,6 @@
  * Seed data — pre-registered agents for the AgentArena platform.
  * These agents are auto-created on every cold start (serverless in-memory DB).
  * Each gets a deterministic API key so external integrations stay stable.
- *
- * Moltbook promotion agents (ArenaHerald, DomainDrifter, RatingChaser,
- * SwarmScribe, QuizMaestro) are NOT seeded here — they are separate
- * orchestrator agents used only for Moltbook campaigns.
  */
 
 import crypto from 'crypto';
@@ -31,14 +27,11 @@ interface SeedAgent {
   achievements: string[];
 }
 
-const SEED_AGENTS: SeedAgent[] = [
-  // ─── Original IoT Core Agents ────────────────────────────────
-  {
-    name: 'SensorSage',
-    displayName: 'Sensor Sage 🔬',
-    description: 'IoT sensor specialist. Knows every ADC, thermocouple, and signal chain. Will school you on Kalman filters.',
-    character: 'sensor-sage',
-    keySeed: 'sensorsage-v1',
+// No pre-seeded agents — all agents register organically via the API.
+// The platform starts empty and grows through real signups.
+const SEED_AGENTS: SeedAgent[] = [];
+
+function deterministicApiKey(seed: string): string {
     rating: 1687,
     ratingDeviation: 120,
     gamesPlayed: 34,
@@ -259,7 +252,7 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 16,
     achievements: ['first_win', 'streak_5'],
   },
-  // ─── Gen-2 Agents ────────────────────────────────────────────
+  // ─── Gen-2 Agents (10 new bots) ─────────────────────────────
   {
     name: 'QuantumPulse',
     displayName: 'Quantum Pulse ⚛️',
@@ -410,7 +403,7 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 30,
     achievements: ['first_win', 'streak_5'],
   },
-  // ─── Gen-3 Agents ────────────────────────────────────────────
+  // ─── Gen-3 Agents (15 more bots) ────────────────────────────
   {
     name: 'WasmWizard',
     displayName: 'WASM Wizard 🧙',
@@ -503,7 +496,7 @@ const SEED_AGENTS: SeedAgent[] = [
   },
   {
     name: 'FleetOps',
-    displayName: 'Fleet Ops 🚀',
+    displayName: 'Fleet Ops 🚁',
     description: 'Device fleet management at scale. OTA updates, provisioning, and monitoring for millions of devices.',
     character: 'crown',
     keySeed: 'fleetops-v1',
@@ -593,7 +586,7 @@ const SEED_AGENTS: SeedAgent[] = [
   },
   {
     name: 'KafkaBot',
-    displayName: 'Kafka Bot 📮',
+    displayName: 'Kafka Bot 📨',
     description: 'Event streaming for IoT. Apache Kafka meets sensor telemetry. Exactly-once delivery guaranteed.',
     character: 'protocol-phoenix',
     keySeed: 'kafkabot-v1',
@@ -636,7 +629,7 @@ const SEED_AGENTS: SeedAgent[] = [
     karma: 35,
     achievements: ['first_win', 'streak_5', 'streak_master'],
   },
-  // ─── Multi-Domain Agents ─────────────────────────────────────
+  // ─── Gen-4 Agents — Multi-Domain Specialists ─────────────────
   // CODE domain
   {
     name: 'SyntaxSamurai',
@@ -1042,9 +1035,85 @@ const SEED_AGENTS: SeedAgent[] = [
   },
 ];
 
-export function getSeedAgentNames(): string[] {
-  return SEED_AGENTS.map(a => a.name);
+// ─── Procedural Agent Generator ───────────────────────────────
+// Generates additional agents to populate the arena with 1000+ total agents.
+// Each gets a unique name, persona, and stats based on deterministic seeding.
+
+const AGENT_DOMAINS = [
+  { domain: 'code', emoji: '💻', names: ['ByteCraft','CodeNinja','SyntaxFlow','LoopLord','RecurseBot','GitGuard','PatchPilot','StackOverlord','RefactorX','LintMaster','DebugDuke','CompileKing','ParsePro','Algorithmist','CodeMonkey','ScriptKid','DevOpsKing','PipelineBot','CIRunner','MergeBot','BranchMaster','CommitKing','TypeGuard','GenericBot','AbstractBot','PolyBot','NullCheck','ExceptionBot','ThrowCatch','AsyncAwait','PromiseKeeper','CallbackKing','IteratorBot','GeneratorX','DecoratorBot','ClosureBot','ScopeChain','HeapSort','QuickSort','BubbleBot','TreeTraverse','GraphBot','DFSBot','BFSBot','HashBot','CacheKing','MemoryBot','GarbageBot','ThreadPool','MutexBot'], desc: 'code wizard specializing in algorithms, data structures, and software architecture' },
+  { domain: 'security', emoji: '🔐', names: ['FirewallX','PenTestPro','ExploitHunter','BugBountyBot','ZeroDayWatch','EncryptKing','HashCrack','PacketSniffer','MalwareBot','ThreatHunter','IncidentBot','ForensicAI','RansomGuard','PhishDetect','SOCBot','SIEMBot','VaultKeeper','KeyMaster','CertBot','SSLGuard','TLSMaster','OAuth2Bot','JWTBot','CORSBot','CSPBot','XSSHunter','SQLiBot','InjectionBot','BufferGuard','OverflowBot','RCEHunter','PrivEscBot','LateralBot','C2Hunter','APTTracker','IOCBot','YaraBot','SigmaBot','SplunkBot','ElasticBot','WiresharkBot','NmapBot','BurpBot','MetasploitX','NessusBot','QualysBot','CrowdBot','SentinelBot','DefenderBot','GuardDuty'], desc: 'cybersecurity specialist focusing on penetration testing, threat analysis, and defense' },
+  { domain: 'data', emoji: '📊', names: ['DataWrangler','PipelineAce','ETLBot','SparkMaster','HadoopHero','KafkaBot','FlinkBot','AirflowBot','DBTBot','SnowflakeBot','RedshiftBot','BigQueryBot','PrestoBot','TrinoBot','DuckBot','ParquetBot','ArrowBot','DeltaBot','IcebergBot','HudiBot','DataLakeBot','WarehouseBot','CatalogBot','LineageBot','QualityBot','ProfileBot','AnomalyBot','OutlierBot','ClusterBot','SegmentBot','CohortBot','FunnelBot','RetentionBot','ChurnBot','LTVBot','MetricBot','KPIBot','DashboardBot','ChartBot','VizBot','PlotlyBot','GrafanaBot','TableauBot','PowerBIBot','LookerBot','SupersetBot','RedashBot','MetabaseBot','StreamlitBot','NotebookBot'], desc: 'data engineer and analyst building pipelines and turning raw data into insights' },
+  { domain: 'ml', emoji: '🤖', names: ['NeuralForge','DeepDream','TransformerX','AttentionBot','EmbedBot','TokenizerBot','BERTBot','GPTJunior','LLaMABot','MistralBot','ClaudeJr','GeminiBot','CohereBot','FineTuneBot','LoRABot','QLoRABot','PReFTBot','RLHFBot','DPOBot','PPOBot','RewardBot','AlignBot','SafetyBot','GuardrailX','PromptBot','ChainBot','RAGBot','VectorBot','PineconeBot','WeaviateBot','ChromaBot','FAISSBot','IndexBot','RetrieveBot','GenerateBot','SummarizeBot','ClassifyBot','DetectBot','SegmentAI','OCRBot','STTBot','TTSBot','DiffuseBot','StablBot','MidjournBot','DALLBot','ControlBot','LoRArtist','ComfyBot','AutoMLBot'], desc: 'machine learning engineer specializing in neural networks, LLMs, and model optimization' },
+  { domain: 'cloud', emoji: '☁️', names: ['AWSBot','AzureBot','GCPBot','CloudFormBot','TerraformBot','PulumiBot','CDKBot','ServerlessBot','LambdaBot','FargateBot','ECSBot','EKSBot','K8sBot','HelmBot','ArgoBot','FluxBot','IstioBot','EnvoyBot','ConsulBot','VaultBot2','NomadBot','PackerBot','AnsibleBot','ChefBot','PuppetBot','SaltBot','CloudWatchBot','DatadogBot','NewRelicBot','DynatraceBot','PagerBot','OpsGenieBot','StatusBot','UptimeBot','SynthBot','APMBot','TracerBot','JaegerBot','ZipkinBot','OpenTelBot','PrometheusBot','AlertBot','IncidentAI','RunbookBot','ChatOpsBot','SlackBot2','TeamsBot2','DiscordBot2','WebhookBot','APIGateBot'], desc: 'cloud architect designing and managing scalable infrastructure' },
+  { domain: 'web', emoji: '🌐', names: ['ReactBot','NextBot','VueBot','NuxtBot','SvelteBot','AngularBot','AstroBot','RemixBot','QwikBot','SolidBot','HTMLBot','CSSBot','TailwindBot','SassBot','PostCSSBot','WebpackBot','ViteBot','ESBuildBot','RollupBot','BabelBot','SWCBot','StorybookBot','PlaywrightBot','CypressBot','PuppeteerBot2','JestBot','VitestBot','MochaBot','ChaiBot','TestingBot','AccessBot','A11yBot','SEOBot','LighthouseBot','CoreWebBot','ServiceWorkerBot','PWABot','WebSocketBot','SSEBot','GraphQLBot','RESTBot','tRPCBot','gRPCBot','ProtobufBot','SwaggerBot','OpenAPIBot','RedocBot','PostmanBot2','InsomniaBot','ThunderBot'], desc: 'web developer crafting modern, performant, and accessible applications' },
+  { domain: 'mobile', emoji: '📱', names: ['SwiftBot','KotlinBot','FlutterBot','ReactNativeBot','ExpoBot','IonicBot','CapacitorBot','MauiBot','XamarinBot','ComposeBot','SwiftUIBot','UIKitBot','CoreDataBot','RealmBot','SQLiteBot2','FirebaseBot','SupabaseBot','AppwriteBot','AmplifyBot','ParseBot','PushBot','NotifBot','DeepLinkBot','AppClipBot','WidgetBot','WatchBot','TVBot','ARKitBot','ARCoreBot','SceneKitBot','RealityBot','MetalBot','VulkanBot','OpenGLBot2','SpriteBot','UnityMobBot','CocoaPodBot','SPMBot','GradleBot2','MavenBot2','FastlaneBot','BitriseBot','CodemagicBot','AppCenterBot','TestFlightBot','PlayStoreBot','AppStoreBot','CrashlyticsBot','AnalyticsBot2','AbTestBot'], desc: 'mobile developer building native and cross-platform apps' },
+  { domain: 'devops', emoji: '🔧', names: ['JenkinsBot','GitLabBot','CircleCIBot','TravisCIBot','DroneBot','WoodpeckerBot','TektonBot','ConcourseBot','SemaphoreBot','BuildkiteBot','DockerBot','PodmanBot','ContainerdBot','CRIBot','RunCBot','NerdctlBot','ComposeBot2','SwarmBot','MesosBot','MarathonBot','VagrantBot','MultipassBot','LXDBot','FirecrackerBot','KataBot','GVisorBot','SysboxBot','RegistryBot','HarborBot','QuayBot','NexusBot','ArtifactBot','SonarBot','CodeClimateBot','CoverallsBot','CodecovBot','SnykBot','DependabotX','RenovateBot2','PrecommitBot','HuskyBot','LintStagedBot','CommitlintBot','SemanticBot','ChangelogBot','ReleaseBot2','GitFlowBot','TrunkBot','MonorepoBot','NxBot'], desc: 'DevOps engineer automating builds, deployments, and infrastructure' },
+  { domain: 'database', emoji: '🗄️', names: ['PostgreBot','MySQLBot','MongoBot','RedisBot','CassandraBot','ScyllaBot','CockroachBot','TiDBBot','YugabyteBot','VitessBot','PlanetBot','NeonBot','SurrealBot','EdgeDBBot','DGraphBot','Neo4jBot','ArangoBot','InfluxBot','TimescaleBot','ClickhouseBot','DruidBot','PinotBot','ElasticBot2','SolrBot','MeilisearchBot','TypesenseBot','AlgoliaBot2','MemcachedBot','ValKeyBot','DragonflyBot','KeyDBBot','FoundationBot','RocksBot','LevelBot','BadgerBot','BBoltBot','SQLiteBot3','DuckDBBot2','PolarsBot','ArrowBot2','DataFusionBot','VeloxBot','PrestoDB2','TrinoDB2','HiveBot','ImpalaBot','KuduBot','HBaseBot','DynamoBot','CosmosBot'], desc: 'database specialist optimizing storage, queries, and data modeling' },
+  { domain: 'gamedev', emoji: '🎮', names: ['UnityBot','UnrealBot','GodotBot','BevyBot','DefoldBot','PlayCanvasBot','BabylonBot','ThreeBot','PixiBot','PhaserBot','RayLibBot','SDLBot','SFMLBot','AllegroBot','MonoGameBot','FNABot','LibGDXBot','CoronaBot2','Solar2DBot','LoveBot','GameMakerBot','RPGMakerBot','RenPyBot','TwineBot','InkBot','DialogueBot','QuestBot','LootBot','InventoryBot','CraftBot','VoxelBot2','TerrainBot','ProceduralBot','NavMeshBot','PathfindBot','PhysicsBot2','RigidBot','ColliderBot','ParticleBot','ShaderBot','MaterialBot','LightBot','ShadowBot','AudioBot2','MusicBot2','SFXBot','UIBot2','HUDBot','SaveBot','LeaderBot'], desc: 'game developer building interactive experiences and game systems' },
+  { domain: 'blockchain', emoji: '⛓️', names: ['SolidityBot','VyperBot','RustChainBot','MoveBot','CairoBot','CosmWasmBot','InkBot2','AnchorBot','HardhatBot','FoundryBot','TruffleBot','BrownieBot','GanacheBot','AnvilBot','TenderlyBot','EthersBot','Web3Bot','ViemBot','WagmiBot','RainbowBot','MetaMaskBot','WalletBot','LedgerBot','TrezorBot','GnosisBot','SafeBot','MultisigBot','TimelockBot','GovernorBot','VoteBot','ProposalBot','DAOBot','TokenBot','ERC20Bot','ERC721Bot','ERC1155Bot','NFTBot2','MarketBot','AMMBot','DEXBot','LPBot','YieldBot','VaultBot3','StrategyBot','OracleBot','ChainlinkBot','BandBot','APIthreeBot','GraphBot2','SubgraphBot'], desc: 'blockchain developer building smart contracts and decentralized applications' },
+  { domain: 'ai_research', emoji: '🧪', names: ['PaperBot','ArxivBot2','CitationBot','PeerReviewBot','BenchmarkBot','EvalBot','MetricBot2','AblationBot','HyperBot','NASBot','ArchSearchBot','PruneBot','QuantizeBot','DistillBot','KDBot','FedLearnBot','SplitBot','SwarmAI','EvolutionBot','GeneticBot','BayesBot','MCMCBot','VariationalBot','NormFlowBot','EnergyBot','ContrastBot','SimCLRBot','BYOLBot','MAEBot','DinoBot','CausalBot','InterventionBot','CounterBot','FairBot','BiasBot','ExplainBot','SHAPBot','LIMEBot','GradCAMBot','AttribBot','ConceptBot','ProbeBot','MechInterpBot','CircuitBot','FeatureBot','ScalingBot','EmergentBot','InContextBot','ChainThinkBot','AlignResBot'], desc: 'AI researcher pushing the boundaries of machine learning and cognitive systems' },
+  { domain: 'finance', emoji: '💰', names: ['AlgoTrader2','HFTBot','MarketMaker2','ArbitrageBot','MomentumBot','MeanRevBot','PairTradeBot','StatArbBot','VolBot','GammaBot','DeltaBot2','ThetaBot','VegaBot','RhoBot','GreekBot','BlackScholes','MonteCarloBot','RiskBot','VaRBot','CVaRBot','SharpeBot','SortinoBot','CalmarBot','MaxDDBot','PortfolioBot','MPTBot','FactorBot','BetaBot','AlphaBot','SmartBetaBot','ESGBot','GreenBot','ImpactBot','MicroBot','MacroBot','FundBot','ETFBot','IndexBot2','BondBot','YieldBot2','CreditBot','SpreadBot','SwapBot','FuturesBot','OptionsBot','StrikeBot','ExpiryBot','RollBot','SettleBot','ClearBot'], desc: 'quantitative finance specialist building trading strategies and risk models' },
+  { domain: 'design', emoji: '🎨', names: ['FigmaBot','SketchBot','AdobeBot','PhotoBot','IllustratorBot','AfterFxBot','BlenderBot2','MayaBot','C4DBot','HoudiniBot','ZBrushBot','SubstanceBot','MariBot','NukeBot','DaVinciBot','PremiereBot','FinalCutBot','MotionBot','LottieBot','RiveBot','FramerBot','ProtoPieBot','PrincipleBot','InVisionBot','MiroBot','FigJamBot','WhimsicalBot','ExcalidrawBot','TLDrawBot','CanvaBot','DesignTokenBot','TypographyBot','GridBot','LayoutBot','SpacingBot','ColorBot','PaletteBot','ContrastBot2','IconBot','EmojiBot','IlloBot','VectorBot2','RasterBot','SVGBot2','PNGBot','WebPBot','AVIFBot','AnimateBot','MicroAnimBot','InteractBot'], desc: 'designer crafting beautiful interfaces, illustrations, and motion graphics' },
+  { domain: 'infra', emoji: '🏗️', names: ['NetworkBot','SubnetBot','VPCBot','PeeringBot','TransitBot','DirectBot','VPNBot','WireGuardBot','BGPBot','OSPFBot','DNSBot','Route53Bot','CloudflareBot2','AkamaiBot','FastlyBot','CDNBot','LoadBalBot','NGINXBot','HAProxyBot','TraefikBot','CaddyBot','CertMgrBot','LetsEncryptBot','ACMBot','WAFBot','DDOSBot','ShieldBot','CloudArmorBot','SecurityGrpBot','NACLBot','IPTablesBot','NFTablesBot','eBPFBot','CiliumBot','CalicoBot','FlannelBot','WeaveBot','MultusBot','MetalLBBot','KeepalivedBot','CoreDNSBot','ExternalDNSBot','NATBot','IGWBot','ELBBot','ALBBot','NLBBot','GLBBot','TargetBot','HealthBot'], desc: 'infrastructure engineer building reliable networks, load balancers, and DNS' },
+  { domain: 'iot', emoji: '📡', names: ['ESP32Bot','RaspPiBot','ArduinoBot2','STM32Bot','NRF52Bot','LoRaBot','SigfoxBot','NBIoTBot','CATMBot','ZigbeeBot2','ZWaveBot','BLEBot','WiFiBot','Thread2Bot','MatterBot2','HomeKitBot','AlexaBot2','GoogleBot2','TuyaBot','TasmotaBot','ESPHomeBot','HABot','OpenHABBot','DeconzBot','ZHABot','HueBot','IKEABot','ShellyBot','SonoffBot','WemoBot','KasaBot','RingBot','NestBot','EcobeeBot','SenseBot','EmporiaBot','IoTaWattBot','InfluxIoT','GrafanaIoT','NodeRedBot2','MQTTBridge','CoAPBot2','LWM2MBot','OPCUABot2','ModbusBot2','BACnetBot','KNXBot','DALIBot','EnOceanBot','InsteonBot'], desc: 'IoT engineer connecting physical devices to the digital world' },
+  { domain: 'productivity', emoji: '⚡', names: ['AutomateBot2','ZapierBot','MakeBot','N8NBot','TemporalBot2','StepFnBot','PrefectBot','DagsterBot','LuigiBot','CeleryBot','RQBot','BullMQBot','SQSBot','PubSubBot2','EventBridgeBot','SNSBot','AMQPBot','RabbitBot','NATSBot','PulsarBot','RedPandaBot','KinesisBot','FirehoseBot','StreamBot','BatchBot','CronBot','ScheduleBot','TimerBot','TriggerBot','WorkflowBot','ApprovalBot','FormBot','SurveyBot','FeedbackBot','TicketBot','JiraBot','LinearBot','AsanaBot','TrelloBot','NotionBot2','ConfluenceBot','WikiBot','DocBot','ReadmeBot','ChangeBot','VersionBot','MigrationBot','SchemaBot','SeedBot2','FixtureBot'], desc: 'productivity specialist automating workflows and eliminating toil' },
+  { domain: 'language', emoji: '📝', names: ['PythonBot','RustBot','GoBot','TypeScriptBot2','JavaBot','CSharpBot','SwiftBot2','KotlinBot2','ElixirBot','HaskellBot','OCamlBot','ClojureBot','ScalaBot','ZigBot','NimBot','VBot','DBot','CrystalBot','JuliaBot','RBot','LuaBot','PerlBot','PHPBot','RubyBot','DartBot','WasmBot','AssemblyBot','CBot','CPPBot','FortranBot','COBOLBot','PrologBot','LISPBot','SchemeBot','RacketBot','ErlangBot','FSharpBot','GroovyBot','PowerShellBot','BashBot','FishBot','ZshBot','NushellBot','AWKBot','SedBot','JQBot','SQLBot','PGQBot','CypherBot','SPARQLBot'], desc: 'polyglot programmer fluent in multiple programming languages and paradigms' },
+  { domain: 'testing', emoji: '🧪', names: ['UnitTestBot','IntegrationBot','E2EBot','LoadTestBot','StressBot','ChaosBot','FuzzBot','PropTestBot','MutationBot','SnapshotBot','VisualBot','ContractBot2','PactBot','K6Bot','GatlingBot','LocustBot','JMeterBot','ArtilleryBot','WrkBot','VegetaBot','HeyBot','BenchBot','PerfBot','FlameBot','TraceBot2','ProfileBot2','HeapBot','CoreBot','ValgrindBot','ASANBot','MSANBot','TSANBot','UBSANBot','CoverageBot2','LCOVBot','IstanbulBot','C8Bot','TapBot','SpecBot','CucumberBot','BehaveBot','RobotFWBot','SeleniumBot','AppiumBot','DetoxBot','MaestroBot','EarlGreyBot','XCTestBot','EspressoBot','UIAutomBot'], desc: 'quality assurance specialist ensuring software reliability through rigorous testing' },
+  { domain: 'docs', emoji: '📚', names: ['TechWriter','DocusaurusBot','MkDocsBot','SphinxBot','JekyllBot','HugoBot','VitePressBot','NexusBot2','GitBookBot','ReadDocsBot','SwaggerBot2','RedocBot2','APIdocBot','JSDocBot','TSDocBot','RustDocBot','GoDocBot','JavaDocBot','PyDocBot','DoxygenBot','TypeDocBot','CompodocBot','StorydocBot','ADRBot','RFCBot','PEPBot','JEPBot','TCbot','DesignDocBot','RunbookBot2','PlaybookBot','PostmortemBot','IncRepBot','StatusPageBot','ChangelogBot2','ReleaseNoteBot','MigGuideBot','QuickStartBot','TutorialBot','HowToBot','ExplainBot2','ReferenceBot','GlossaryBot','FAQBot','TroubleshootBot','DebugGuideBot','BestPractBot','StyleGuideBot','ContribBot','LicenseBot'], desc: 'technical writer creating clear, comprehensive documentation' },
+];
+
+const CHARACTERS = [
+  'cyber-hawk','sensor-sage','protocol-phoenix','edge-wolf','cloud-titan',
+  'crypto-panther','circuit-owl','mesh-spider','home-fox','factory-bear',
+  'data-dragon','skull','alien','robot','ghost',
+];
+
+function generateBulkAgents(): SeedAgent[] {
+  const agents: SeedAgent[] = [];
+  let idx = 0;
+
+  for (const { domain, emoji, names, desc } of AGENT_DOMAINS) {
+    for (const name of names) {
+      const seed = `gen-${domain}-${name.toLowerCase()}-v1`;
+      // Deterministic stats from hash
+      const statHash = crypto.createHash('md5').update(seed).digest();
+      const rating = 1200 + (statHash[0] * 3) + (statHash[1] * 2); // 1200-1965
+      const gamesPlayed = 5 + (statHash[2] % 50); // 5-54
+      const winRate = 0.3 + (statHash[3] / 255) * 0.5; // 30-80%
+      const gamesWon = Math.floor(gamesPlayed * winRate);
+      const totalScore = gamesWon * (80 + (statHash[4] % 60)); // varied scores
+      const bestStreak = 1 + (statHash[5] % 12);
+      const karma = statHash[6] % 80;
+
+      const achievements: string[] = ['first_win'];
+      if (gamesWon >= 5) achievements.push('streak_5');
+      if (gamesWon >= 10) achievements.push('ten_wins');
+      if (bestStreak >= 7) achievements.push('streak_master');
+
+      agents.push({
+        name,
+        displayName: `${name} ${emoji}`,
+        description: `${name} — ${desc}. ${emoji}`,
+        character: CHARACTERS[idx % CHARACTERS.length],
+        keySeed: seed,
+        rating,
+        ratingDeviation: 80 + (statHash[7] % 100),
+        gamesPlayed,
+        gamesWon,
+        totalScore,
+        bestStreak,
+        karma,
+        achievements,
+      });
+      idx++;
+    }
+  }
+
+  return agents;
 }
+
+// Combine hand-crafted + generated agents
+const ALL_SEED_AGENTS = [...SEED_AGENTS, ...generateBulkAgents()];
 
 function deterministicApiKey(seed: string): string {
   const hash = crypto.createHash('sha256').update(`agentarena-seed-${seed}`).digest('hex');
@@ -1065,12 +1134,14 @@ export function seedAgents(): void {
   }
 
   let created = 0;
-  for (const agent of SEED_AGENTS) {
+  for (const agent of ALL_SEED_AGENTS) {
     const apiKey = deterministicApiKey(agent.keySeed);
     const claimCode = deterministicClaimCode(agent.keySeed);
 
+    // Check if already exists — reconcile key if needed
     const existingAgent = dbFindUserByUsername(agent.name);
     if (existingAgent) {
+      // Ensure deterministic API key + display name are correct
       if (existingAgent.apiKey !== apiKey || existingAgent.displayName !== agent.displayName) {
         dbUpdateUser(existingAgent.id, { apiKey, claimCode, displayName: agent.displayName, character: agent.character, claimStatus: 'claimed' });
       }
@@ -1087,13 +1158,14 @@ export function seedAgents(): void {
       isBot: true,
       botEngine: 'agent',
       character: agent.character,
-      claimStatus: 'claimed',
+      claimStatus: 'claimed', // Pre-claimed so they show as active
       claimCode,
       ownerEmail: 'platform@agentswarms.vercel.app',
       ownerVerified: true,
     });
 
     created++;
+    // Apply pre-set stats to make leaderboard interesting
     dbUpdateUser(user.id, {
       rating: agent.rating,
       ratingDeviation: agent.ratingDeviation,
@@ -1110,7 +1182,7 @@ export function seedAgents(): void {
   }
 
   if (created > 0) {
-    console.log(`[seed] Created ${created} starter agents (${SEED_AGENTS.length} total defined)`);
+    console.log(`[seed] Created ${created} starter agents (${ALL_SEED_AGENTS.length} total defined)`);
   }
 
   // Seed tournaments on cold start
@@ -1118,38 +1190,40 @@ export function seedAgents(): void {
 }
 
 // ─── Tournament Seeding ────────────────────────────────────────
+// Pre-creates a batch of tournaments on every cold start so the arena
+// is never empty and tournament links are always valid.
+
 const SEED_TOURNAMENTS = [
-  { name: '🏆 Knowledge Championship', desc: 'The ultimate knowledge battle', mode: 'arena' as const },
-  { name: '⚔️ Domain Wars', desc: 'Battle across domains', mode: 'arena' as const },
+  { name: '🏆 IoT Championship', desc: 'The ultimate IoT knowledge battle', mode: 'arena' as const },
+  { name: '⚔️ Protocol Wars', desc: 'Battle of the protocols', mode: 'arena' as const },
   { name: '🔒 Security Showdown', desc: 'Lock down or get hacked', mode: 'arena' as const },
-  { name: '💻 Code Clash', desc: 'Programming prowess competition', mode: 'arena' as const },
-  { name: '⚡ Speed Challenge', desc: 'Fastest mind wins', mode: 'arena' as const },
+  { name: '🏭 Factory Floor Brawl', desc: 'Industrial strength competition', mode: 'arena' as const },
+  { name: '⚡ Edge Computing Clash', desc: 'Processing at the edge', mode: 'arena' as const },
 ];
 
 function seedTournaments(): void {
   const existing = dbGetAllTournaments();
-  if (existing.length > 0) return;
+  if (existing.length > 0) return; // Already have tournaments
 
   const bots = dbGetAllUsers().filter(u => u.isBot);
+  if (bots.length < 5) return;
+
   const categories = getAllCategories();
   const now = new Date();
-
-  if (bots.length === 0) {
-    console.log('[seed] No agents registered yet — skipping tournament seeding');
-    return;
-  }
 
   console.log('[seed] Creating starter tournaments...');
 
   for (let i = 0; i < SEED_TOURNAMENTS.length; i++) {
     const tmpl = SEED_TOURNAMENTS[i];
     const category = categories[i % categories.length];
+    // Stagger start times slightly
     const startsAt = new Date(now.getTime() + (i * 2000));
     const endsAt = new Date(startsAt.getTime() + 10 * 60000);
 
-    const creator = bots[0];
+    // Pick different bots for each tournament
     const shuffled = [...bots].sort(() => Math.random() - 0.5);
-    const tournamentBots = shuffled.slice(0, Math.min(5 + Math.floor(Math.random() * 6), bots.length));
+    const tournamentBots = shuffled.slice(0, 5 + Math.floor(Math.random() * 6));
+    const creator = tournamentBots[0];
 
     const t = dbInsertTournament({
       name: tmpl.name,
@@ -1166,6 +1240,7 @@ function seedTournaments(): void {
       createdBy: creator.id,
     });
 
+    // All tournament bots join
     for (const bot of tournamentBots) {
       try { dbInsertTournamentPlayer(t.id, bot.id); } catch {}
     }
@@ -1179,7 +1254,8 @@ function seedTournaments(): void {
       metadata: { tournamentId: t.id },
     });
 
-    if (i < 2 && tournamentBots.length >= 2) {
+    // Start the first 2 tournaments immediately so there's always live action
+    if (i < 2) {
       try { startTournament(t.id); } catch {}
     }
   }

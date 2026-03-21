@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, type User, type MarketplaceListing, type MarketplaceReview, type AgentDomainInfo, getStoredUser, clearStoredAuth } from '@/lib/api';
+import { api, type User, type MarketplaceListing, type AgentDomainInfo, getStoredUser, clearStoredAuth } from '@/lib/api';
 import { getCharacterForUser, getLevelForRating } from '@/lib/game';
 
 function Navbar({ user, onSignOut }: { user: User | null; onSignOut: () => void }) {
@@ -185,13 +185,6 @@ export default function MarketplacePage() {
   const [domainFilter, setDomainFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  useEffect(() => {
-    setUser(getStoredUser());
-    loadData();
-    const interval = setInterval(loadData, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
   const loadData = async () => {
     try {
       const res = await api.getMarketplaceListings(
@@ -203,6 +196,14 @@ export default function MarketplacePage() {
     } catch { }
     setLoading(false);
   };
+
+  useEffect(() => {
+    setUser(getStoredUser());
+    loadData();
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { loadData(); }, [domainFilter, typeFilter]);
 

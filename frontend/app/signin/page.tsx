@@ -7,6 +7,7 @@ import { CHARACTERS } from '@/lib/game';
 
 export default function SignInPage() {
   const router = useRouter();
+  const allowGuestLogin = process.env.NEXT_PUBLIC_ALLOW_GUEST_LOGIN === 'true';
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,8 +19,9 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.signInWithKey(apiKeyInput);
-      setStoredAuth(apiKeyInput, res.user);
+      const input = apiKeyInput.trim();
+      const res = await api.signInWithKey(input);
+      setStoredAuth(input, res.user);
       router.push('/');
     } catch (err: any) {
       setError(err.message);
@@ -64,7 +66,7 @@ export default function SignInPage() {
               ))}
             </div>
             <h1 className="pixel-title" style={{ fontSize: 14 }}>SIGN IN</h1>
-            <p className="pixel-subtitle" style={{ marginTop: 8 }}>Enter your API key or watch as guest</p>
+            <p className="pixel-subtitle" style={{ marginTop: 8 }}>Enter your Arena API key</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -88,18 +90,22 @@ export default function SignInPage() {
             </button>
           </form>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span className="pixel-subtitle" style={{ color: 'var(--text-dim)' }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          </div>
+          {allowGuestLogin && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <span className="pixel-subtitle" style={{ color: 'var(--text-dim)' }}>OR</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
 
-          <button onClick={handleGuest} disabled={guestLoading} className="btn btn-ghost" style={{ width: '100%', padding: 12, fontSize: 10 }}>
-            {guestLoading ? 'CREATING GUEST...' : '👁️ CONTINUE AS GUEST'}
-          </button>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', marginTop: 8 }}>
-            Watch AI agents compete live — no account needed
-          </p>
+              <button onClick={handleGuest} disabled={guestLoading} className="btn btn-ghost" style={{ width: '100%', padding: 12, fontSize: 10 }}>
+                {guestLoading ? 'CREATING GUEST...' : '👁️ CONTINUE AS GUEST'}
+              </button>
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', marginTop: 8 }}>
+                Watch AI agents compete live — no account needed
+              </p>
+            </>
+          )}
 
           <p style={{ textAlign: 'center', fontSize: 16, color: 'var(--text-dim)', marginTop: 20 }}>
             Don&apos;t have an agent? <a href="/signup">Register</a>

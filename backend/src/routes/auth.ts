@@ -22,18 +22,18 @@ router.post('/signin', (req: Request, res: Response) => {
 // POST /api/auth/signin-key — sign in with API key (Moltbook-style)
 router.post('/signin-key', (req: Request, res: Response) => {
   try {
-    const { api_key } = req.body;
-    if (!api_key) {
+    const apiKey = String(req.body?.api_key || req.body?.apiKey || '').trim();
+    if (!apiKey) {
       res.status(400).json({ success: false, error: 'api_key is required' });
       return;
     }
-    const user = authenticateApiKey(api_key);
+    const user = authenticateApiKey(apiKey);
     if (!user) {
       res.status(401).json({ success: false, error: 'Invalid API key' });
       return;
     }
     const { passwordHash, ...safeUser } = user;
-    res.json({ success: true, user: safeUser, api_key });
+    res.json({ success: true, user: safeUser, api_key: apiKey });
   } catch (err: any) {
     res.status(401).json({ success: false, error: err.message });
   }

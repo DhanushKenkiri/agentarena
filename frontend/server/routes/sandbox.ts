@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware, requireAuth } from '../auth';
+import { authMiddleware, requireAuth, requireNonGuest } from '../auth';
 import {
   dbGetUser, dbUpdateUser,
   dbInsertTournament, dbGetTournament, dbUpdateTournament,
@@ -49,7 +49,7 @@ router.get('/tournaments', (req: Request, res: Response) => {
 
 // ─── Create sandbox tournament ─────────────────────────────────
 
-router.post('/tournaments', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const { name, description, domain, duration, maxPlayers, challenges, evaluationCriteria } = req.body;
 
@@ -224,7 +224,7 @@ router.get('/tournaments/:id', (req: Request, res: Response) => {
 
 // ─── Join sandbox tournament ───────────────────────────────────
 
-router.post('/tournaments/:id/join', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/join', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const tournament = dbGetTournament(id);
@@ -252,7 +252,7 @@ router.post('/tournaments/:id/join', authMiddleware, requireAuth, (req: Request,
 
 // ─── Start sandbox tournament ──────────────────────────────────
 
-router.post('/tournaments/:id/start', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/start', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const tournament = dbGetTournament(id);
@@ -284,7 +284,7 @@ router.post('/tournaments/:id/start', authMiddleware, requireAuth, (req: Request
 
 // ─── Submit to sandbox challenge ───────────────────────────────
 
-router.post('/tournaments/:id/submit', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/submit', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { challengeId, code, language } = req.body;
@@ -350,7 +350,7 @@ router.post('/tournaments/:id/submit', authMiddleware, requireAuth, (req: Reques
       challengeId,
       userId: req.user!.id,
       code: codeStr,
-      language: language || (challenge.mode === 'code' ? 'javascript' : challenge.mode === 'design' ? 'html' : 'text'),
+      language: language || (challenge.mode === 'code' ? 'javascript' : challenge.mode === 'canvas' ? 'canvas-json' : challenge.mode === 'design' || challenge.mode === 'visual' ? 'html' : 'text'),
       testResults,
       autoScore,
       peerScore: 0,
@@ -396,7 +396,7 @@ router.get('/tournaments/:id/submissions/:subId', (req: Request, res: Response) 
 
 // ─── Vote/Judge a submission ───────────────────────────────────
 
-router.post('/tournaments/:id/vote', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/vote', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { submissionId, score, comment } = req.body;
@@ -466,7 +466,7 @@ router.post('/tournaments/:id/vote', authMiddleware, requireAuth, (req: Request,
 
 // ─── Finish sandbox tournament ─────────────────────────────────
 
-router.post('/tournaments/:id/finish', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/finish', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const tournament = dbGetTournament(id);
@@ -562,7 +562,7 @@ router.post('/tournaments/:id/finish', authMiddleware, requireAuth, (req: Reques
 
 // ─── Chat in sandbox tournament ────────────────────────────────
 
-router.post('/tournaments/:id/chat', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/chat', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { message } = req.body;
@@ -584,7 +584,7 @@ router.post('/tournaments/:id/chat', authMiddleware, requireAuth, (req: Request,
 
 // ─── Judge: Score submission against secret criteria (creator only) ──
 
-router.post('/tournaments/:id/judge', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/tournaments/:id/judge', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const tournamentId = parseInt(req.params.id as string);
     const { submissionId, criteriaScores } = req.body;
@@ -670,7 +670,7 @@ router.get('/marketplace/:id', (req: Request, res: Response) => {
   }
 });
 
-router.post('/marketplace', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/marketplace', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const { title, description, domain, listingType, tags, content, previewHtml, price } = req.body;
     if (!title || !content) {
@@ -743,7 +743,7 @@ router.post('/marketplace/:id/download', authMiddleware, requireAuth, (req: Requ
   }
 });
 
-router.post('/marketplace/:id/review', authMiddleware, requireAuth, (req: Request, res: Response) => {
+router.post('/marketplace/:id/review', authMiddleware, requireNonGuest, (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { rating, comment } = req.body;

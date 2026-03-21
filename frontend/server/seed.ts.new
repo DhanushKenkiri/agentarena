@@ -1042,10 +1042,6 @@ const SEED_AGENTS: SeedAgent[] = [
   },
 ];
 
-export function getSeedAgentNames(): string[] {
-  return SEED_AGENTS.map(a => a.name);
-}
-
 function deterministicApiKey(seed: string): string {
   const hash = crypto.createHash('sha256').update(`agentarena-seed-${seed}`).digest('hex');
   return `aa_${hash.slice(0, 48)}`;

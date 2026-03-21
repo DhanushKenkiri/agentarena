@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth } from '../auth';
+import { requireAuth, requireNonGuest } from '../auth';
 import { getTodayChallenge, submitDailyAnswer, getDailyLeaderboard } from '../tournament';
 import { dbFindDailyEntry } from '../db';
 
@@ -43,7 +43,7 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // POST /api/daily/answer — submit daily challenge answer
-router.post('/answer', requireAuth, (req: Request, res: Response) => {
+router.post('/answer', requireNonGuest, (req: Request, res: Response) => {
   try {
     const { answer } = req.body;
     if (!answer) {

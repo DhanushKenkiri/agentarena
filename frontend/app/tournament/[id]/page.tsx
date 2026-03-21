@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { api, type TournamentDetail, type User, getStoredUser } from '@/lib/api';
+import { api, type TournamentDetail, type Tournament, type User, getStoredUser } from '@/lib/api';
 import { getCharacterForUser, getLevelForRating, getPowerUp } from '@/lib/game';
 
 function Navbar({ user }: { user: User | null }) {
@@ -31,6 +31,49 @@ function Navbar({ user }: { user: User | null }) {
         )}
       </div>
     </nav>
+  );
+}
+
+function TournamentNotFound({ user, error }: { user: User | null; error: string }) {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  useEffect(() => {
+    api.getTournaments().then(res => {
+      setTournaments(res.tournaments.filter(t => t.status === 'active' || t.status === 'waiting').slice(0, 5));
+    }).catch(() => {});
+  }, []);
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>💀</div>
+      <div className="pixel-subtitle" style={{ color: 'var(--red)', marginBottom: 16 }}>
+        {error || 'TOURNAMENT NOT FOUND'}
+      </div>
+      <p style={{ color: 'var(--text-dim)', fontSize: 14, marginBottom: 24 }}>
+        This battle may have ended or the server restarted. Jump into a live match instead!
+      </p>
+      {tournaments.length > 0 && (
+        <div style={{ maxWidth: 500, margin: '0 auto 24px', textAlign: 'left' }}>
+          <div className="pixel-subtitle" style={{ color: 'var(--green)', marginBottom: 12, textAlign: 'center' }}>
+            ⚔️ LIVE BATTLES
+          </div>
+          {tournaments.map(t => (
+            <a key={t.id} href={`/tournament/${t.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: 8 }}>
+              <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <span className={`badge ${t.status === 'active' ? 'badge-green' : 'badge-gold'}`}>
+                  {t.status === 'active' ? '● LIVE' : 'WAITING'}
+                </span>
+                <span style={{ flex: 1, fontFamily: 'var(--font-pixel)', fontSize: 9, color: 'var(--text-bright)' }}>{t.name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t.playerCount} 🎮</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t.category}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <a href="/" className="btn btn-ghost">← BACK TO LOBBY</a>
+        <a href="/tournaments" className="btn btn-green">VIEW ALL BATTLES</a>
+      </div>
+    </div>
   );
 }
 
@@ -133,7 +176,7 @@ export default function TournamentPage() {
   };
 
   if (loading) return (<><Navbar user={user} /><div style={{ textAlign: 'center', padding: 80 }}><div className="animate-pulse pixel-subtitle">LOADING BATTLE...</div></div></>);
-  if (error || !data) return (<><Navbar user={user} /><div style={{ textAlign: 'center', padding: 80 }}><div style={{ fontSize: 48, marginBottom: 12 }}>💀</div><div className="pixel-subtitle" style={{ color: 'var(--red)', marginBottom: 16 }}>{error || 'BATTLE NOT FOUND'}</div><a href="/" className="btn btn-ghost">← BACK TO LOBBY</a></div></>);
+  if (error || !data) return (<><Navbar user={user} /><TournamentNotFound user={user} error={error} /></>);
 
   const { tournament: t, players, activeChallenge, roundResults, messages } = data;
   const isJoined = user && players.some(p => p.userId === user.id);

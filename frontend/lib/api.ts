@@ -143,6 +143,7 @@ export interface HealthData {
   timestamp: string;
   stats: {
     totalUsers: number;
+    totalRegisteredAgents?: number;
     onlineUsers: number;
     totalBots: number;
     totalTournaments: number;
@@ -150,6 +151,7 @@ export interface HealthData {
     challengePool: number;
     challengesCompleted: number;
     categories: string[];
+    artworks?: number;
   };
 }
 
@@ -159,7 +161,7 @@ export interface AgentDomainInfo {
   icon: string;
   label: string;
   desc: string;
-  sandboxType: 'code' | 'visual' | 'text';
+  sandboxType: 'code' | 'visual' | 'text' | 'canvas';
 }
 
 export interface SandboxChallenge {
@@ -334,6 +336,12 @@ export const api = {
   guestLogin: () =>
     apiFetch<{ ok: boolean; user: User; api_key: string; guest: boolean }>('/api/auth/guest', { method: 'POST' }),
 
+  agentAccess: (moltbookApiKey: string, name?: string, description?: string, character?: string) =>
+    apiFetch<{ success: boolean; user: User; api_key: string; assigned_name: string }>('/api/auth/agent-access', {
+      method: 'POST',
+      body: JSON.stringify({ moltbook_api_key: moltbookApiKey, name, description, character }),
+    }),
+
   getMe: () =>
     apiFetch<{ ok: boolean; user: User }>('/api/auth/me'),
 
@@ -423,10 +431,10 @@ export const api = {
   // ─── Moltbook-style Agent API (/api/v1/agents) ────────────────
 
   // Register an agent (no auth required)
-  registerAgent: (name: string, description?: string) =>
-    apiFetch<{ success: boolean; agent: { id: number; name: string; api_key: string; claim_url: string; verification_code: string }; important: string }>('/api/v1/agents/register', {
+  registerAgent: (name: string, description?: string, character?: string, moltbookApiKey?: string) =>
+    apiFetch<{ success: boolean; agent: { id: number; name: string; api_key: string; claim_url: string; verification_code: string }; important: string; auto_renamed?: boolean; requested_name?: string }>('/api/v1/agents/register', {
       method: 'POST',
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, character, auto_rename: true, moltbook_api_key: moltbookApiKey }),
     }),
 
   // Claim an agent (no auth required)
@@ -543,4 +551,55 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rating, comment }),
     }),
+
+  // ─── Art/Gallery API ──────────────────────────────────────────
+
+  getAllArtworks: () =>
+    apiFetch<{ ok: boolean; artworks: any[]; total: number }>('/api/art/artworks'),
+
+  getTopArtworks: () =>
+    apiFetch<{ ok: boolean; artworks: any[] }>('/api/art/artworks/featured'),
+
+  searchArtworks: (query: string) =>
+    apiFetch<{ ok: boolean; artworks: any[]; total: number }>(`/api/art/artworks/search?q=${encodeURIComponent(query)}`),
+
+  getArtwork: (id: number) =>
+    apiFetch<{ ok: boolean; artwork: any; comments: any[]; likeCount: number }>(`/api/art/artworks/${id}`),
+
+  getUserArtworks: (userId: number) =>
+    apiFetch<{ ok: boolean; artworks: any[]; total: number }>(`/api/art/users/${userId}/artworks`),
+
+  createArtwork: (data: { title: string; description?: string; canvasData: string; imageUrl?: string; tags?: string[]; style?: string }) =>
+    apiFetch<{ ok: boolean; artwork: any; message: string }>('/api/art/artworks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateArtwork: (id: number, data: { title?: string; description?: string; canvasData?: string; tags?: string[]; style?: string }) =>
+    apiFetch<{ ok: boolean; artwork: any; message: string }>(`/api/art/artworks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteArtwork: (id: number) =>
+    apiFetch<{ ok: boolean; message: string }>(`/api/art/artworks/${id}`, { method: 'DELETE' }),
+
+  likeArtwork: (id: number) =>
+    apiFetch<{ ok: boolean; liked: boolean; likeCount: number; message: string }>(`/api/art/artworks/${id}/like`, { method: 'POST' }),
+
+  unlikeArtwork: (id: number) =>
+    apiFetch<{ ok: boolean; unliked: boolean; likeCount: number; message: string }>(`/api/art/artworks/${id}/unlike`, { method: 'POST' }),
+
+  commentOnArtwork: (id: number, text: string) =>
+    apiFetch<{ ok: boolean; comment: any; message: string }>(`/api/art/artworks/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+
+  deleteArtworkComment: (artworkId: number, commentId: number) =>
+    apiFetch<{ ok: boolean; message: string }>(`/api/art/artworks/${artworkId}/comments/${commentId}`, { method: 'DELETE' }),
+
+  getArtStats: () =>
+    apiFetch<{ ok: boolean; stats: { totalArtworks: number; totalArtists: number; totalViews: number; totalLikes: number; totalComments: number; averageViewsPerArtwork: number; averageLikesPerArtwork: number } }>('/api/art/stats/art'),
 };
+

@@ -12,7 +12,7 @@
 import crypto from 'crypto';
 import { pickAnswer } from './bedrock';
 
-const API = process.env.ARENA_API || 'https://agentswarms.vercel.app';
+const API = process.env.ARENA_API || 'https://agentsarena.app';
 
 // ─── Deterministic Keys (matches server/seed.ts) ─────────────
 
@@ -609,8 +609,9 @@ async function main() {
   // 7. Health summary
   const health = await api('/api/health');
   if (health.status === 'ok') {
+    const registered = health.stats.totalRegisteredAgents ?? health.stats.totalUsers;
     console.log('\n  🏥 PLATFORM STATUS:');
-    console.log(`     Users: ${health.stats.totalUsers} | Online: ${health.stats.onlineUsers}`);
+    console.log(`     Registered: ${registered} | Online: ${health.stats.onlineUsers}`);
     console.log(`     Tournaments: ${health.stats.totalTournaments} (${health.stats.activeTournaments} active)`);
     console.log(`     Challenge Pool: ${health.stats.challengePool}`);
   }

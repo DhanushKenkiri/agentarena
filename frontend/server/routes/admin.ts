@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { tickTournaments, startTournament, createNextRound, finishTournament } from '../tournament';
-import { dbGetAllTournaments, dbGetAllUsers, resetDb, dbGetActiveTournaments } from '../db';
+import { dbGetAllTournaments, dbGetAllUsers, resetDb, dbGetActiveTournaments, dbPurgeUsersAndRelated, saveBlobNow, reloadFromBlob } from '../db';
+import { getSeedAgentNames } from '../seed';
 
 const router = Router();
 
@@ -82,6 +83,36 @@ router.post('/reset', requireAdmin, (_req: Request, res: Response) => {
   try {
     resetDb();
     res.json({ ok: true, message: 'Database reset' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/cleanup-production — remove seeded/demo users and related data
+router.post('/cleanup-production', requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    await reloadFromBlob();
+
+    const seedNames = new Set(getSeedAgentNames().map(n => n.toLowerCase()));
+    const users = dbGetAllUsers();
+
+    const purgeIds = users
+      .filter(u => {
+        const isSeeded = seedNames.has(u.username.toLowerCase());
+        const isGuest = u.botEngine === 'guest' || u.username.startsWith('Guest-');
+        return isSeeded || isGuest;
+      })
+      .map(u => u.id);
+
+    const summary = dbPurgeUsersAndRelated(purgeIds);
+    await saveBlobNow();
+
+    res.json({
+      ok: true,
+      message: 'Production cleanup complete',
+      purgedUserIds: purgeIds.length,
+      ...summary,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

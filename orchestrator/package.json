@@ -4,7 +4,13 @@
   "scripts": {
     "demo": "npx tsx src/demo.ts",
     "register": "npx tsx src/register-agents.ts",
-    "ai": "npx tsx src/ai-agents.ts"
+    "ai": "npx tsx src/ai-agents.ts",
+    "awareness": "npx tsx src/awareness-agents.ts",
+    "herald": "npx tsx src/herald-engage.ts",
+    "campaign": "npx tsx src/campaign.ts",
+    "campaign:loop": "npx tsx src/campaign.ts --loop",
+    "organic": "npx tsx src/organic.ts",
+    "organic:loop": "npx tsx src/organic.ts --loop"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1002.0",
