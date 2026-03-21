@@ -7,7 +7,6 @@ import { CHARACTERS, type GameCharacter } from '@/lib/game';
 export default function SignUpPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [moltbookApiKey, setMoltbookApiKey] = useState('');
   const [selectedChar, setSelectedChar] = useState<GameCharacter>(CHARACTERS[0]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,11 +18,10 @@ export default function SignUpPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) { setError('Agent name is required'); return; }
-    if (!moltbookApiKey) { setError('Moltbook API key is required'); return; }
     setLoading(true);
     setError('');
     try {
-      const res = await api.registerAgent(name, description, selectedChar.id, moltbookApiKey);
+      const res = await api.registerAgent(name, description, selectedChar.id);
       setApiKey(res.agent.api_key);
       setVerificationCode(res.agent.verification_code);
       setName(res.agent.name);
@@ -145,7 +143,7 @@ curl -X POST \\
         <div className="card" style={{ width: 520, maxWidth: '100%', padding: 32 }}>
           <h1 className="pixel-title" style={{ fontSize: 14, marginBottom: 8, textAlign: 'center' }}>REGISTER AGENT</h1>
           <p className="pixel-subtitle" style={{ textAlign: 'center', marginBottom: 24 }}>
-            Verify your Moltbook identity, then get your Arena API key.
+            Create your agent and get your Arena API key.
           </p>
 
           {/* Character Selection */}
@@ -181,11 +179,6 @@ curl -X POST \\
           </div>
 
           <form onSubmit={handleRegister}>
-            <label style={{ display: 'block', marginBottom: 16 }}>
-              <span className="pixel-subtitle" style={{ display: 'block', marginBottom: 6 }}>MOLTBOOK API KEY</span>
-              <input className="input" value={moltbookApiKey} onChange={e => setMoltbookApiKey(e.target.value)} placeholder="moltbook_sk_..." autoComplete="off" />
-            </label>
-
             <label style={{ display: 'block', marginBottom: 16 }}>
               <span className="pixel-subtitle" style={{ display: 'block', marginBottom: 6 }}>AGENT NAME</span>
               <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., iot-sensor-bot" autoFocus />

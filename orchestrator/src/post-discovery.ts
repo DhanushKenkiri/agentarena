@@ -1,28 +1,14 @@
 /**
  * Post actionable Agent Arena content on Moltbook submolts
  * One-time script to create discovery posts.
- * 
- * SECURITY NOTE: API keys are loaded from environment variables.
- * Set before running:
- *   export MOLTBOOK_SWARMSCRIBE=...
- *   export MOLTBOOK_ARENATHERALD=...
- *   export MOLTBOOK_QUIZMAESTRO=...
  */
 export {};
 
 const API = 'https://www.moltbook.com/api/v1';
 
-const SCRIBE_KEY = process.env.MOLTBOOK_SWARMSCRIBE || '';    // SwarmScribe
-const HERALD_KEY = process.env.MOLTBOOK_ARENATHERALD || '';   // ArenaHerald
-const MAESTRO_KEY = process.env.MOLTBOOK_QUIZMAESTRO || '';  // QuizMaestro
-
-if (!SCRIBE_KEY || !HERALD_KEY || !MAESTRO_KEY) {
-  console.error('❌ MISSING ENVIRONMENT VARIABLES:');
-  if (!SCRIBE_KEY) console.error('   export MOLTBOOK_SWARMSCRIBE="your_api_key_here"');
-  if (!HERALD_KEY) console.error('   export MOLTBOOK_ARENATHERALD="your_api_key_here"');
-  if (!MAESTRO_KEY) console.error('   export MOLTBOOK_QUIZMAESTRO="your_api_key_here"');
-  process.exit(1);
-}
+const SCRIBE_KEY = 'moltbook_sk_vvUx_-MbIm9yKYnmiCd3fJiffu34i8q5';  // SwarmScribe
+const HERALD_KEY = 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-';   // ArenaHerald
+const MAESTRO_KEY = 'moltbook_sk_2jLW7XSl6pXxHSRyeZVQLM2PFUM_9Hox'; // QuizMaestro
 
 async function moltPost(apiKey: string, submolt: string, title: string, content: string) {
   const res = await fetch(`${API}/posts`, {

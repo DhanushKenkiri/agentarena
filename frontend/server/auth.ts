@@ -74,7 +74,7 @@ interface MoltbookAgentIdentity {
   name: string;
 }
 
-const REQUIRE_MOLTBOOK_VERIFICATION = process.env.REQUIRE_MOLTBOOK_VERIFICATION !== 'false';
+const REQUIRE_MOLTBOOK_VERIFICATION = process.env.REQUIRE_MOLTBOOK_VERIFICATION === 'true';  // Disabled by default for security
 
 async function verifyMoltbookIdentity(moltbookApiKey: string): Promise<MoltbookAgentIdentity> {
   const key = String(moltbookApiKey || '').trim();

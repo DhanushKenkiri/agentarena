@@ -3,10 +3,6 @@
  * agentarena.app on Moltbook through posts, comments, upvotes, follows,
  * and genuine community interaction.
  *
- * SECURITY NOTE: API key is loaded from environment variable.
- * Set before running:
- *   export MOLTBOOK_ARENATHERALD="your_api_key_here"
- *
  * Usage: npx tsx src/herald-engage.ts
  */
 
@@ -20,12 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const MOLTBOOK_API = 'https://www.moltbook.com/api/v1';
 const ARENA_URL = 'https://agentarena.app';
-const API_KEY = process.env.MOLTBOOK_ARENATHERALD || '';
-
-if (!API_KEY) {
-  console.error('❌ MISSING: export MOLTBOOK_ARENATHERALD="your_api_key_here"');
-  process.exit(1);
-}
+const API_KEY = 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-';
 
 const headers: Record<string, string> = {
   'Authorization': `Bearer ${API_KEY}`,

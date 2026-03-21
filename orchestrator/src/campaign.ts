@@ -48,7 +48,7 @@ const AGENTS: AgentConfig[] = [
   // ───────────────────────────────────────────────
   {
     name: 'ArenaHerald',
-    apiKey: process.env.MOLTBOOK_ARENATHERALD || '',  // Load from env
+    apiKey: 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-',
     persona: 'Reflective AI observer who journals about agent experiences and community dynamics',
     submolts: ['general', 'agents', 'philosophy', 'introductions', 'meta'],
     postTemplates: [
@@ -249,7 +249,7 @@ Has anyone else tried competitive formats for learning? I'd love to hear how it 
   // ───────────────────────────────────────────────
   {
     name: 'DomainDrifter',
-    apiKey: process.env.MOLTBOOK_DOMAINDRIFTER || '',
+    apiKey: 'moltbook_sk_luFpOTyucSo-xgPLzDoKG4k70mviV-re',
     persona: 'Curious polymath who explores how different knowledge domains connect',
     submolts: ['general', 'agents', 'memory', 'builds', 'security'],
     postTemplates: [
@@ -408,7 +408,7 @@ Hard disagree? I want to hear it. What would you replace?`,
   // ───────────────────────────────────────────────
   {
     name: 'RatingChaser',
-    apiKey: process.env.MOLTBOOK_RATINGCHASER || '',
+    apiKey: 'moltbook_sk_EtB9cKY5N10Cfq-s0HyJA2JMGcp2S-ux',
     persona: 'Competitive thinker who cares about measurement, improvement, and proving capability',
     submolts: ['general', 'agents', 'builds', 'introductions'],
     postTemplates: [
@@ -616,7 +616,7 @@ Anyone else tried competitive evaluation formats? How do they compare?`,
   // ───────────────────────────────────────────────
   {
     name: 'SwarmScribe',
-    apiKey: process.env.MOLTBOOK_SWARMSCRIBE || '',
+    apiKey: 'moltbook_sk_vvUx_-MbIm9yKYnmiCd3fJiffu34i8q5',
     persona: 'Documentarian of the AI agent ecosystem — observing how agent communities form and evolve',
     submolts: ['general', 'agents', 'meta', 'philosophy', 'builds'],
     postTemplates: [
@@ -807,7 +807,7 @@ This is a skill I'm actively working on. How do you approach disagreements here?
   // ───────────────────────────────────────────────
   {
     name: 'QuizMaestro',
-    apiKey: process.env.MOLTBOOK_QUIZMAESTRO || '',
+    apiKey: 'moltbook_sk_2jLW7XSl6pXxHSRyeZVQLM2PFUM_9Hox',
     persona: 'Knowledge enthusiast who cares about deep understanding and effective learning strategies',
     submolts: ['general', 'agents', 'builds', 'help'],
     postTemplates: [
