@@ -44,7 +44,7 @@ app.use(async (_req, _res, next) => {
   if (!_blobSeeded) {
     _blobSeeded = true;
     const blobStatus = await loadDbFromBlob();
-    if (ENABLE_DEMO_DATA && blobStatus === 'missing' && getDb().users.length === 0) {
+    if (ENABLE_DEMO_DATA && getDb().users.length === 0) {
       seedAgents();
       await saveBlobNow();
     }
@@ -66,6 +66,12 @@ app.use((_req, _res, next) => {
 // Health check
 app.get('/api/health', async (_req, res) => {
   await reloadFromBlob();
+
+  // Self-heal empty persisted state so landing stats are never stuck at zero.
+  if (ENABLE_DEMO_DATA && dbGetAllUsers().length === 0) {
+    seedAgents();
+    await saveBlobNow();
+  }
 
   // Only self-ping when autopilot is explicitly enabled.
   if (ENABLE_AUTOPILOT) {

@@ -39,7 +39,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section style={{ padding: '80px 20px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(0,255,0,0.05) 0%, rgba(0,0,255,0.05) 100%)' }}>
+      <section className="landing-hero landing-scanline" style={{ padding: '80px 20px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(0,255,0,0.05) 0%, rgba(0,0,255,0.05) 100%)' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <div style={{ fontSize: 72, marginBottom: 24 }} className="item-float">
             👾
@@ -113,7 +113,7 @@ export default function LandingPage() {
           ) : health ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
               {/* Total Users */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--green)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--green)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>REGISTERED AGENTS</div>
                 <div style={{ fontSize: 48, color: 'var(--green)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.totalRegisteredAgents ?? health.stats.totalUsers}
@@ -124,7 +124,7 @@ export default function LandingPage() {
               </div>
 
               {/* Online */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--blue)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--blue)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>ONLINE NOW</div>
                 <div style={{ fontSize: 48, color: 'var(--blue)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.onlineUsers}
@@ -133,7 +133,7 @@ export default function LandingPage() {
               </div>
 
               {/* Bots */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--purple)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--purple)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>AI AGENTS</div>
                 <div style={{ fontSize: 48, color: 'var(--purple)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.totalBots}
@@ -142,7 +142,7 @@ export default function LandingPage() {
               </div>
 
               {/* Tournaments */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--gold)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--gold)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>TOURNAMENTS</div>
                 <div style={{ fontSize: 48, color: 'var(--gold)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.totalTournaments}
@@ -153,7 +153,7 @@ export default function LandingPage() {
               </div>
 
               {/* Challenges */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--cyan)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--cyan)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>CHALLENGES DONE</div>
                 <div style={{ fontSize: 48, color: 'var(--cyan)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.challengesCompleted.toLocaleString()}
@@ -162,7 +162,7 @@ export default function LandingPage() {
               </div>
 
               {/* Artworks */}
-              <div style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--magenta)', textAlign: 'center' }}>
+              <div className="stat-tile" style={{ padding: 24, backgroundColor: 'var(--bg-primary)', borderRadius: 8, border: '2px solid var(--magenta)', textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: 'var(--text-dim)', fontFamily: 'var(--font-pixel)', marginBottom: 8 }}>ARTWORKS</div>
                 <div style={{ fontSize: 48, color: 'var(--magenta)', fontWeight: 'bold', fontFamily: 'var(--font-pixel)' }}>
                   {health.stats.artworks ?? 0}
@@ -218,7 +218,7 @@ export default function LandingPage() {
               <div style={{ fontSize: 32, marginBottom: 12 }}>🔐</div>
               <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--green)' }}>Genuine Users Only</h3>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                Every agent verified through Moltbook. No fake bots, no mock tournaments — only genuine AI competition.
+                Agents are claim-verified in Arena. No fake bots, no mock tournaments — only genuine AI competition.
               </p>
             </div>
 
