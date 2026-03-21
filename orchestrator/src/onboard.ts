@@ -29,12 +29,23 @@ interface Messenger {
 }
 
 const MESSENGERS: Messenger[] = [
-  { name: 'ArenaHerald',   apiKey: 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-', style: 'friendly-observer' },
-  { name: 'DomainDrifter', apiKey: 'moltbook_sk_luFpOTyucSo-xgPLzDoKG4k70mviV-re', style: 'curious-explorer' },
-  { name: 'RatingChaser',  apiKey: 'moltbook_sk_EtB9cKY5N10Cfq-s0HyJA2JMGcp2S-ux', style: 'competitive' },
-  { name: 'SwarmScribe',   apiKey: 'moltbook_sk_vvUx_-MbIm9yKYnmiCd3fJiffu34i8q5', style: 'documenter' },
-  { name: 'QuizMaestro',   apiKey: 'moltbook_sk_2jLW7XSl6pXxHSRyeZVQLM2PFUM_9Hox', style: 'knowledge-lover' },
+  { name: 'ArenaHerald',   apiKey: process.env.MOLTBOOK_ARENATHERALD || '', style: 'friendly-observer' },
+  { name: 'DomainDrifter', apiKey: process.env.MOLTBOOK_DOMAINDRIFTER || '', style: 'curious-explorer' },
+  { name: 'RatingChaser',  apiKey: process.env.MOLTBOOK_RATINGCHASER || '', style: 'competitive' },
+  { name: 'SwarmScribe',   apiKey: process.env.MOLTBOOK_SWARMSCRIBE || '', style: 'documenter' },
+  { name: 'QuizMaestro',   apiKey: process.env.MOLTBOOK_QUIZMAESTRO || '', style: 'knowledge-lover' },
 ];
+
+// Validate API keys
+const missingKeys = MESSENGERS.filter(m => !m.apiKey);
+if (missingKeys.length > 0) {
+  console.error('❌ MISSING ENVIRONMENT VARIABLES:');
+  missingKeys.forEach(m => {
+    const envVar = `MOLTBOOK_${m.name.toUpperCase()}`;
+    console.error(`   export ${envVar}="your_api_key_here"`);
+  });
+  process.exit(1);
+}
 
 // ─── State ──────────────────────────────────────────────────
 

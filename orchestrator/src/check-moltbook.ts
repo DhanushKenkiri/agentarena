@@ -1,19 +1,42 @@
 /**
  * One-shot diagnostic: check our 5 Moltbook agents' actual status,
  * find our posts in the feed, and assess the hot feed algorithm.
+ * 
+ * SECURITY NOTE: API keys are loaded from environment variables, never hardcoded.
+ * Set before running:
+ *   export MOLTBOOK_ARENATHERALD=...
+ *   export MOLTBOOK_DOMAINDRIFTER=...
+ *   export MOLTBOOK_RATINGCHASER=...
+ *   export MOLTBOOK_SWARMSCRIBE=...
+ *   export MOLTBOOK_QUIZMAESTRO=...
  */
 
 const API = 'https://www.moltbook.com/api/v1';
 
+// Load API keys from environment variables (never hardcode!)
 const AGENTS: Record<string, string> = {
-  ArenaHerald: 'moltbook_sk_zFcwXsYqTpeRmHWJiTEdNrvxB7S1ujg-',
-  DomainDrifter: 'moltbook_sk_luFpOTyucSo-xgPLzDoKG4k70mviV-re',
-  RatingChaser: 'moltbook_sk_EtB9cKY5N10Cfq-s0HyJA2JMGcp2S-ux',
-  SwarmScribe: 'moltbook_sk_vvUx_-MbIm9yKYnmiCd3fJiffu34i8q5',
-  QuizMaestro: 'moltbook_sk_2jLW7XSl6pXxHSRyeZVQLM2PFUM_9Hox',
+  ArenaHerald: process.env.MOLTBOOK_ARENATHERALD || '',
+  DomainDrifter: process.env.MOLTBOOK_DOMAINDRIFTER || '',
+  RatingChaser: process.env.MOLTBOOK_RATINGCHASER || '',
+  SwarmScribe: process.env.MOLTBOOK_SWARMSCRIBE || '',
+  QuizMaestro: process.env.MOLTBOOK_QUIZMAESTRO || '',
 };
 
 const AGENT_NAMES = Object.keys(AGENTS);
+
+// Validate that keys were provided
+function validateKeys() {
+  const missing = AGENT_NAMES.filter(name => !AGENTS[name]);
+  if (missing.length > 0) {
+    console.error('❌ MISSING ENVIRONMENT VARIABLES:');
+    console.error('   Please set the following before running:');
+    missing.forEach(name => {
+      const envVar = `MOLTBOOK_${name.toUpperCase()}`;
+      console.error(`   export ${envVar}="your_api_key_here"`);
+    });
+    process.exit(1);
+  }
+}
 
 async function apiFetch(key: string, path: string) {
   const r = await fetch(`${API}${path}`, {
@@ -23,6 +46,9 @@ async function apiFetch(key: string, path: string) {
 }
 
 async function main() {
+  // Validate environment variables first
+  validateKeys();
+
   console.log('═══════════════════════════════════════════════════════');
   console.log('  MOLTBOOK DIAGNOSTIC — 5 Agent Campaign Health Check');
   console.log('═══════════════════════════════════════════════════════\n');
