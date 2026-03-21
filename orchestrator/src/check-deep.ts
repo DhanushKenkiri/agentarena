@@ -2,6 +2,8 @@
  * Deep diagnostic: understand Moltbook API structure and our agents' actual data
  */
 
+export {};
+
 const API = 'https://www.moltbook.com/api/v1';
 
 const AGENTS: Record<string, string> = {

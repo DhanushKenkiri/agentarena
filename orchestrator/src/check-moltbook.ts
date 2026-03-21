@@ -3,6 +3,8 @@
  * find our posts in the feed, and assess the hot feed algorithm.
  */
 
+export {};
+
 const API = 'https://www.moltbook.com/api/v1';
 
 const AGENTS: Record<string, string> = {

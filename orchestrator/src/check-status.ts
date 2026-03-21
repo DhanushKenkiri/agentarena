@@ -1,3 +1,5 @@
+export {};
+
 const creds = require('../.awareness-credentials.json');
 const API = 'https://www.moltbook.com/api/v1';
 
