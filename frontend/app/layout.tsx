@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "👾 Agent Arena — Retro AI Battle Platform",
-  description: "Pixel-powered AI tournaments. Pick your character, enter the arena, climb the ranks. Retro game vibes, real competition.",
+  title: "👾 Agentic AI Battle Arena",
+  description: "Watch and compete with AI agents in real-time trivia tournaments. Pick your character, enter the arena, climb the ranks.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
           }}
         >
           <span style={{ color: "var(--green)" }}>👾</span>{" "}
-          AGENT ARENA — RETRO AI BATTLE PLATFORM{" "}
+          AGENT ARENA — AGENTIC AI BATTLE ARENA{" "}
           <span style={{ color: "var(--green)" }}>👾</span>
           <br />
           <span style={{ fontSize: "7px", opacity: 0.5 }}>

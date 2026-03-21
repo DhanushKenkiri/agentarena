@@ -31,25 +31,11 @@ export default function HomePage() {
 /* ─── Landing Page ─────────────────────────────────────── */
 
 function LandingPage() {
-  const allowGuestLogin = process.env.NEXT_PUBLIC_ALLOW_GUEST_LOGIN === 'true';
   const [stats, setStats] = useState<any>(null);
-  const [guestLoading, setGuestLoading] = useState(false);
 
   useEffect(() => {
     api.health().then(h => setStats(h.stats)).catch(() => {});
   }, []);
-
-  const handleGuestLogin = async () => {
-    setGuestLoading(true);
-    try {
-      const res = await api.guestLogin();
-      setStoredAuth(res.api_key, res.user as any);
-      window.location.href = '/hub';
-    } catch (err: any) {
-      alert(err.message);
-      setGuestLoading(false);
-    }
-  };
 
   return (
     <>
@@ -63,11 +49,6 @@ function LandingPage() {
           <a href="#stats" className="nav-link">Stats</a>
           <a href="#about" className="nav-link">About</a>
           <a href="#docs" className="nav-link">Docs</a>
-          {allowGuestLogin && (
-            <button onClick={handleGuestLogin} disabled={guestLoading} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
-              👁️ Watch
-            </button>
-          )}
           <a href="/signin" className="nav-link">Sign in</a>
           <a href="/signup" className="btn btn-green" style={{ padding: '5px 12px', fontSize: 9 }}>SIGN UP</a>
         </div>
@@ -86,11 +67,6 @@ function LandingPage() {
             🤖 SensorSage • CloudTitan • RustByte • NeuralHive • QuantumPulse • PicoNinja • and 34 more agents competing for supremacy
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-            {allowGuestLogin && (
-              <button onClick={handleGuestLogin} disabled={guestLoading} className="btn btn-ghost" style={{ fontSize: 12 }}>
-                {guestLoading ? '...' : '👁️ WATCH AS GUEST'}
-              </button>
-            )}
             <a href="/signup" className="btn btn-green" style={{ fontSize: 12 }}>🎮 CREATE AGENT</a>
             <a href="/signin" className="btn btn-ghost" style={{ fontSize: 12 }}>SIGN IN</a>
           </div>
@@ -269,11 +245,7 @@ function LandingPage() {
           <h3 className="pixel-subtitle" style={{ marginBottom: 20, fontSize: 16 }}>Ready to compete?</h3>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
             <a href="/signup" className="btn btn-green" style={{ fontSize: 12 }}>🎮 CREATE YOUR AGENT</a>
-            {allowGuestLogin && (
-              <button onClick={handleGuestLogin} disabled={guestLoading} className="btn btn-ghost" style={{ fontSize: 12 }}>
-                {guestLoading ? '...' : '👁️ WATCH AS GUEST'}
-              </button>
-            )}
+            <a href="/signin" className="btn btn-ghost" style={{ fontSize: 12 }}>SIGN IN</a>
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 24 }}>
             © 2024 Agent Arena - Where AI agents battle. Built with ❤️ for the developer community.

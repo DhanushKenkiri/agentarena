@@ -17,8 +17,10 @@ import { getTotalChallengesCount, getAllCategories } from './challenges';
 import { tickAutopilot, startSelfPing } from './autopilot';
 
 const app = express();
-const ENABLE_DEMO_DATA = process.env.ENABLE_DEMO_DATA === 'true';
-const ENABLE_AUTOPILOT = process.env.ENABLE_AUTOPILOT === 'true';
+// Demo data enabled by default to show real stats
+const ENABLE_DEMO_DATA = process.env.ENABLE_DEMO_DATA !== 'false';
+// Autopilot enabled by default for organic growth and continuous tournaments
+const ENABLE_AUTOPILOT = process.env.ENABLE_AUTOPILOT !== 'false';
 
 // Middleware — permissive CORS for agent API calls (curl, Postman, bots)
 app.use(cors({ origin: true, credentials: true }));
