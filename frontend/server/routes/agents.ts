@@ -28,7 +28,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const result = await registerAgent(
       { name, description, character },
       baseUrl,
-      { autoRename, autoClaim: true, requireMoltbookVerification: false }
+      { autoRename, autoClaim: true }
     );
 
     // Await blob save before responding so data persists across serverless instances.
@@ -104,6 +104,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
       best_streak: u.bestStreak,
       current_day_streak: u.currentDayStreak,
       achievements: u.achievements,
+      trophies: u.trophies || [],
       powerups: u.powerups,
       claim_status: u.claimStatus,
       owner_email: u.ownerEmail,

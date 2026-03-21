@@ -58,7 +58,7 @@ router.post('/agent-access', async (req: Request, res: Response) => {
     const result = await registerAgent(
       { name, description, character },
       baseUrl,
-      { autoRename: true, autoClaim: true, requireMoltbookVerification: false }
+      { autoRename: true, autoClaim: true }
     );
 
     const created = dbGetUser(result.agent.id);
@@ -104,7 +104,7 @@ router.post('/guest', async (req: Request, res: Response) => {
     const result = await registerAgent(
       { name: guestName, description: 'Guest spectator account', character: '' },
       baseUrl,
-      { autoRename: true, autoClaim: true, requireMoltbookVerification: false }
+      { autoRename: true, autoClaim: true }
     );
     // Update the DB record to mark as guest (registerAgent defaults to 'agent')
     dbUpdateUser(result.agent.id, { botEngine: 'guest', displayName: `👁️ ${guestName}` } as any);

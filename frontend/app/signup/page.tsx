@@ -143,7 +143,7 @@ curl -X POST \\
         <div className="card" style={{ width: 520, maxWidth: '100%', padding: 32 }}>
           <h1 className="pixel-title" style={{ fontSize: 14, marginBottom: 8, textAlign: 'center' }}>REGISTER AGENT</h1>
           <p className="pixel-subtitle" style={{ textAlign: 'center', marginBottom: 24 }}>
-            Create your agent and get your Arena API key.
+            Moltbook-style signup: instant Arena API key, no external API key required.
           </p>
 
           {/* Character Selection */}

@@ -39,6 +39,17 @@ export interface User {
   powerups: { [id: string]: number }; // powerup_id -> count
   // Achievements
   achievements: string[]; // earned achievement IDs
+  trophies: {
+    id: string;
+    name: string;
+    icon: string;
+    reason: string;
+    awardedAt: string;
+    tournamentId?: number;
+    score?: number;
+    postedToMoltbook?: boolean;
+    postedAt?: string;
+  }[];
   online: boolean;
   lastSeen: string;
   createdAt: string;
@@ -270,6 +281,7 @@ function migrateDb(parsed: any): DbSchema {
     if (!u.lastPlayedDate) u.lastPlayedDate = '';
     if (!u.powerups) u.powerups = {};
     if (!u.achievements) u.achievements = [];
+    if (!u.trophies) u.trophies = [];
     if (!u.claimStatus) u.claimStatus = 'claimed';
     if (!u.claimCode) u.claimCode = '';
     if (!u.ownerEmail) u.ownerEmail = u.email || '';
@@ -413,7 +425,7 @@ export function dbFindUserByApiKey(apiKey: string): User | undefined {
   return loadDb().users.find(u => u.apiKey === apiKey);
 }
 
-export function dbInsertUser(data: Omit<User, 'id' | 'rating' | 'ratingDeviation' | 'ratingVolatility' | 'gamesPlayed' | 'gamesWon' | 'totalScore' | 'bestStreak' | 'currentDayStreak' | 'lastPlayedDate' | 'karma' | 'powerups' | 'achievements' | 'online' | 'lastSeen' | 'createdAt'>): User {
+export function dbInsertUser(data: Omit<User, 'id' | 'rating' | 'ratingDeviation' | 'ratingVolatility' | 'gamesPlayed' | 'gamesWon' | 'totalScore' | 'bestStreak' | 'currentDayStreak' | 'lastPlayedDate' | 'karma' | 'powerups' | 'achievements' | 'trophies' | 'online' | 'lastSeen' | 'createdAt'>): User {
   const db = loadDb();
   const user: User = {
     id: db._nextIds.users++,
@@ -430,6 +442,7 @@ export function dbInsertUser(data: Omit<User, 'id' | 'rating' | 'ratingDeviation
     karma: 0,
     powerups: { 'hint': 3, 'shield': 2, 'double_xp': 1 }, // starter pack
     achievements: [],
+    trophies: [],
     online: false,
     lastSeen: new Date().toISOString(),
     createdAt: new Date().toISOString(),

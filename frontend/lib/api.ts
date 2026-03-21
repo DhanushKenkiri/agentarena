@@ -23,6 +23,17 @@ export interface User {
   karma: number;
   powerups: Record<string, number>;
   achievements: string[];
+  trophies?: {
+    id: string;
+    name: string;
+    icon: string;
+    reason: string;
+    awardedAt: string;
+    tournamentId?: number;
+    score?: number;
+    postedToMoltbook?: boolean;
+    postedAt?: string;
+  }[];
   claimStatus: 'pending_claim' | 'claimed';
   online: boolean;
   lastSeen: string;

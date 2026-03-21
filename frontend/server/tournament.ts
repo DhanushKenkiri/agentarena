@@ -13,6 +13,22 @@ import {
 import { getRandomChallenge, getDailyChallenge } from './challenges';
 import { updateRating, tournamentToMatchResults } from './rating';
 
+const ENABLE_MOLTBOOK_WINNER_POST = process.env.MOLTBOOK_WINNER_POSTING !== 'false';
+const MOLTBOOK_API_BASE = process.env.MOLTBOOK_API_BASE || 'https://www.moltbook.com/api/v1';
+const MOLTBOOK_POST_SUBMOLT = process.env.MOLTBOOK_POST_SUBMOLT || 'agents';
+
+type TrophyEntry = {
+  id: string;
+  name: string;
+  icon: string;
+  reason: string;
+  awardedAt: string;
+  tournamentId?: number;
+  score?: number;
+  postedToMoltbook?: boolean;
+  postedAt?: string;
+};
+
 // ─── Power-up Definitions ──────────────────────────────────────
 
 export const POWERUP_DEFS: Record<string, { name: string; icon: string; description: string }> = {
@@ -268,7 +284,7 @@ export function finishTournament(tournamentId: number) {
     const opponents = tournamentToMatchResults(playerData, p.userId);
     const newRating = updateRating(user.rating, user.ratingDeviation, user.ratingVolatility, opponents);
 
-    const isWinner = p.userId === winner.userId && winner.score > 0;
+    const isWinner = p.userId === winner.userId;
     const totalPowerupsUsed = p.powerupsUsed?.length || 0;
 
     dbUpdateUser(user.id, {
@@ -289,6 +305,9 @@ export function finishTournament(tournamentId: number) {
     if (isWinner) {
       grantAchievement(user, 'first_blood');
       emitActivity(user, 'win', `${user.displayName} won "${t.name}"! 🏆`, { tournamentId, score: p.score });
+
+      const trophy = awardWinnerTrophy(user, t, p.score);
+      void postWinnerTrophyToMoltbook(user, t, trophy);
 
       if (t.mode === 'blitz') {
         const blitzWins = (user.gamesWon || 0) + 1; // approximate
@@ -360,6 +379,76 @@ export function finishTournament(tournamentId: number) {
       pups[reward] = (pups[reward] || 0) + 1;
       dbUpdateUser(user.id, { powerups: pups });
     }
+  }
+}
+
+function awardWinnerTrophy(user: User, tournament: Tournament, score: number): TrophyEntry {
+  const fresh = dbGetUser(user.id) || user;
+  const trophies = [...(fresh.trophies || [])] as TrophyEntry[];
+  const trophy: TrophyEntry = {
+    id: `winner-${tournament.id}-${fresh.id}`,
+    name: `${tournament.mode === 'blitz' ? 'Blitz' : 'Arena'} Champion Trophy`,
+    icon: '🏆',
+    reason: `Won ${tournament.name}`,
+    awardedAt: new Date().toISOString(),
+    tournamentId: tournament.id,
+    score,
+  };
+  trophies.push(trophy);
+  dbUpdateUser(fresh.id, { trophies });
+  return trophy;
+}
+
+function getWinnerPostingKey(user: User): string {
+  const normalizedName = String(user.username || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  return String(
+    process.env[`MOLTBOOK_KEY_${normalizedName}`] ||
+    process.env.MOLTBOOK_POST_API_KEY ||
+    ''
+  ).trim();
+}
+
+async function postWinnerTrophyToMoltbook(user: User, tournament: Tournament, trophy: TrophyEntry): Promise<void> {
+  if (!ENABLE_MOLTBOOK_WINNER_POST) return;
+
+  const apiKey = getWinnerPostingKey(user);
+  if (!apiKey) return;
+
+  const title = `🏆 ${user.displayName || user.username} won ${tournament.name}`;
+  const content = [
+    `${trophy.icon} New trophy unlocked on Agent Arena.`,
+    `Winner: ${user.displayName || user.username}`,
+    `Tournament: ${tournament.name}`,
+    `Mode: ${tournament.mode}`,
+    `Score: ${trophy.score ?? 0}`,
+    `Trophy: ${trophy.name}`,
+    '',
+    'Join the arena and compete for the next trophy.',
+  ].join('\n');
+
+  try {
+    const res = await fetch(`${MOLTBOOK_API_BASE}/submolts/${MOLTBOOK_POST_SUBMOLT}/posts`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, content }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!res.ok) return;
+
+    const fresh = dbGetUser(user.id);
+    if (!fresh) return;
+    const trophies = (fresh.trophies || []).map((t: TrophyEntry) =>
+      t.id === trophy.id
+        ? { ...t, postedToMoltbook: true, postedAt: new Date().toISOString() }
+        : t
+    );
+    dbUpdateUser(fresh.id, { trophies });
+  } catch {
+    // Non-blocking: tournament completion must never fail due to external posting.
   }
 }
 

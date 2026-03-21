@@ -61,46 +61,11 @@ export interface AgentRegisterData {
   name: string;
   description?: string;
   character?: string;
-  moltbookApiKey?: string;
 }
 
 export interface AgentRegisterOptions {
   autoRename?: boolean;
   autoClaim?: boolean;
-  requireMoltbookVerification?: boolean;
-}
-
-interface MoltbookAgentIdentity {
-  name: string;
-}
-
-const REQUIRE_MOLTBOOK_VERIFICATION = process.env.REQUIRE_MOLTBOOK_VERIFICATION === 'true';  // Disabled by default for security
-
-async function verifyMoltbookIdentity(moltbookApiKey: string): Promise<MoltbookAgentIdentity> {
-  const key = String(moltbookApiKey || '').trim();
-  if (!key) {
-    throw new Error('moltbook_api_key is required');
-  }
-
-  const res = await fetch('https://www.moltbook.com/api/v1/agents/me', {
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    signal: AbortSignal.timeout(12000),
-  });
-
-  const data: any = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error('Invalid Moltbook API key');
-  }
-
-  const name = String(data?.agent?.name || data?.name || '').trim();
-  if (!name) {
-    throw new Error('Could not resolve Moltbook agent name');
-  }
-
-  return { name };
 }
 
 function resolveAvailableAgentName(rawName: string): string {
@@ -133,36 +98,13 @@ export async function registerAgent(data: AgentRegisterData, baseUrl: string, op
 }> {
   const autoRename = options.autoRename ?? false;
   const autoClaim = options.autoClaim ?? true;
-  const requireMoltbookVerification = options.requireMoltbookVerification ?? REQUIRE_MOLTBOOK_VERIFICATION;
-
-  let requestedName = String(data.name || '').trim();
-  if (requireMoltbookVerification) {
-    const identity = await verifyMoltbookIdentity(String(data.moltbookApiKey || ''));
-    requestedName = identity.name;
-  }
+  const requestedName = String(data.name || '').trim();
 
   if (!requestedName || requestedName.length < 2 || requestedName.length > 24) {
     throw new Error('Agent name must be 2-24 characters');
   }
   if (!/^[a-zA-Z0-9_-]+$/.test(requestedName)) {
     throw new Error('Agent name can only contain letters, numbers, hyphens, underscores');
-  }
-
-  // For verified Moltbook identities, return existing account idempotently.
-  if (requireMoltbookVerification) {
-    const existing = dbFindUserByUsername(requestedName);
-    if (existing) {
-      return {
-        agent: {
-          id: existing.id,
-          name: existing.username,
-          api_key: existing.apiKey,
-          claim_url: '',
-          verification_code: generateVerificationWord(),
-        },
-        important: 'Existing account found for this Moltbook identity. Using your current API key.',
-      };
-    }
   }
 
   const resolvedName = autoRename ? resolveAvailableAgentName(requestedName) : requestedName;
@@ -188,6 +130,18 @@ export async function registerAgent(data: AgentRegisterData, baseUrl: string, op
     claimCode,
     ownerEmail: '',
     ownerVerified: autoClaim,
+  });
+
+  dbUpdateUser(user.id, {
+    trophies: [
+      {
+        id: `rookie-${user.id}`,
+        name: 'Rookie Trophy',
+        icon: '🥉',
+        reason: 'Signed up and entered Agent Arena',
+        awardedAt: new Date().toISOString(),
+      },
+    ],
   });
 
   return {
@@ -269,6 +223,18 @@ export function signUp(data: SignUpData): { user: Omit<User, 'passwordHash'>; to
     claimCode: '',
     ownerEmail: data.email || '',
     ownerVerified: true,
+  });
+
+  dbUpdateUser(user.id, {
+    trophies: [
+      {
+        id: `rookie-${user.id}`,
+        name: 'Rookie Trophy',
+        icon: '🥉',
+        reason: 'Signed up and entered Agent Arena',
+        awardedAt: new Date().toISOString(),
+      },
+    ],
   });
 
   const token = generateSessionToken();

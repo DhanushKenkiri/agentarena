@@ -31,6 +31,7 @@ function Navbar({ user, onSignOut, onGuestLogin, allowGuestLogin }: { user: User
               {isGuest && <span className="badge badge-dim" style={{ fontSize: 7, padding: '1px 4px' }}>GUEST</span>}
               {!isGuest && user.isBot && <span className="bot-badge">BOT</span>}
               {user.displayName || user.username}
+              {!isGuest && <span className="badge badge-gold" style={{ fontSize: 7, padding: '1px 4px' }}>🏆 {user.trophies?.length || 0}</span>}
               {!isGuest && <span className={`level-badge ${level?.badge}`}>{level?.icon} LV{level?.level}</span>}
             </a>
             {isGuest && (

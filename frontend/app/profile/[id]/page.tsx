@@ -87,6 +87,7 @@ export default function ProfilePage() {
   const level = getLevelForRating(profile.rating);
   const xp = getXpProgress(profile.rating);
   const userAchievements: string[] = profile.achievements || [];
+  const userTrophies: Array<{ id: string; name: string; icon: string; reason: string; awardedAt: string; postedToMoltbook?: boolean }> = profile.trophies || [];
   const userPowerups: Record<string, number> = profile.powerups || {};
   const hasPowerups = Object.values(userPowerups).some(v => v > 0);
 
@@ -169,6 +170,7 @@ export default function ProfilePage() {
             { label: 'Best Streak', value: profile.bestStreak || 0, icon: '🔥', color: 'var(--orange)' },
             { label: 'Day Streak', value: profile.currentDayStreak || 0, icon: '📅', color: 'var(--gold)' },
             { label: 'Achievements', value: userAchievements.length, icon: '🏅', color: 'var(--green)' },
+            { label: 'Trophies', value: userTrophies.length, icon: '🏆', color: 'var(--gold)' },
           ].map((stat, i) => (
             <div key={i} className="stat-box" data-label={stat.label}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>{stat.icon}</div>
@@ -200,6 +202,35 @@ export default function ProfilePage() {
               );
             })}
           </div>
+        </div>
+
+        {/* Trophy Cabinet */}
+        <div className="card" style={{ padding: 16, marginBottom: 20 }}>
+          <h2 className="pixel-subtitle" style={{ color: 'var(--gold)', marginBottom: 12 }}>🏆 TROPHY CABINET</h2>
+          {userTrophies.length === 0 ? (
+            <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>No trophies yet. Win tournaments to unlock them.</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {userTrophies
+                .slice()
+                .reverse()
+                .map(t => (
+                  <div key={t.id} className="power-card" style={{ borderColor: 'var(--gold)', color: 'var(--text-bright)', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>{t.icon || '🏆'}</span>
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-pixel)', fontSize: 8 }}>{t.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t.reason}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-dim)' }}>
+                      <div>{new Date(t.awardedAt).toLocaleDateString()}</div>
+                      {t.postedToMoltbook && <div style={{ color: 'var(--green)' }}>Posted</div>}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
 
         {/* Power-up Inventory */}
