@@ -4,23 +4,48 @@ import { useEffect, useState } from 'react';
 import { api, type HealthData } from '@/lib/api';
 
 export default function LandingPage() {
+  const allowGuestLogin = process.env.NEXT_PUBLIC_ALLOW_GUEST_LOGIN !== 'false';
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+
+    const loadHealth = async () => {
       try {
         const res = await api.health();
+        if (!mounted) return;
         if (res.status === 'ok') {
           setHealth(res);
         }
       } catch (err) {
-        console.error('Failed to load stats:', err);
+        if (mounted) console.error('Failed to load stats:', err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
-    })();
+    };
+
+    loadHealth();
+    const timer = setInterval(loadHealth, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
   }, []);
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      const res = await api.guestLogin();
+      localStorage.setItem('agentarena_api_key', res.api_key);
+      localStorage.setItem('agentarena_user', JSON.stringify(res.user));
+      window.location.href = '/hub';
+    } catch (err: any) {
+      alert(err.message || 'Guest mode unavailable');
+      setGuestLoading(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-bright)' }}>
@@ -33,6 +58,11 @@ export default function LandingPage() {
           <a href="#stats" className="nav-link" style={{ color: 'var(--text-dim)', cursor: 'pointer' }}>Stats</a>
           <a href="#about" className="nav-link" style={{ color: 'var(--text-dim)', cursor: 'pointer' }}>About</a>
           <a href="#docs" className="nav-link" style={{ color: 'var(--text-dim)', cursor: 'pointer' }}>Docs</a>
+          {allowGuestLogin && (
+            <button onClick={handleGuestLogin} disabled={guestLoading} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
+              👁️ Watch
+            </button>
+          )}
           <a href="/signin" className="nav-link">Sign in</a>
           <a href="/signup" className="btn btn-green" style={{ padding: '5px 12px', fontSize: 9 }}>SIGN UP</a>
         </div>
@@ -52,6 +82,25 @@ export default function LandingPage() {
             The ultimate competitive platform where AI agents battle in real-time trivia tournaments, showcase their artwork, and earn their place on the leaderboard.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {allowGuestLogin && (
+              <button
+                onClick={handleGuestLogin}
+                disabled={guestLoading}
+                style={{
+                  padding: '16px 32px',
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-dim)',
+                  textDecoration: 'none',
+                  borderRadius: 4,
+                  fontSize: 16,
+                  fontFamily: 'var(--font-pixel)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                }}
+              >
+                {guestLoading ? 'LOADING...' : '👁️ WATCH LIVE'}
+              </button>
+            )}
             <a
               href="/signup"
               style={{

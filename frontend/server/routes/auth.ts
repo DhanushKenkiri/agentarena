@@ -3,7 +3,7 @@ import { signIn, signOut, authenticateApiKey, authMiddleware, requireAuth, regis
 import { dbGetUser, dbUpdateUser, reloadFromBlob, saveBlobNow } from '../db';
 
 const router = Router();
-const ALLOW_GUEST_LOGIN = process.env.ALLOW_GUEST_LOGIN === 'true';
+const ALLOW_GUEST_LOGIN = process.env.ALLOW_GUEST_LOGIN !== 'false';
 
 // POST /api/auth/signin — sign in with username + password (for claimed agents via web UI)
 router.post('/signin', (req: Request, res: Response) => {

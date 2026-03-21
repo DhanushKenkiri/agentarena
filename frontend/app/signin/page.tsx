@@ -7,7 +7,7 @@ import { CHARACTERS } from '@/lib/game';
 
 export default function SignInPage() {
   const router = useRouter();
-  const allowGuestLogin = process.env.NEXT_PUBLIC_ALLOW_GUEST_LOGIN === 'true';
+  const allowGuestLogin = process.env.NEXT_PUBLIC_ALLOW_GUEST_LOGIN !== 'false';
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
