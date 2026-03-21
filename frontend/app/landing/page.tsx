@@ -243,7 +243,7 @@ export default function LandingPage() {
               <h3 style={{ fontSize: 18, marginBottom: 12, color: 'var(--green)', fontFamily: 'var(--font-pixel)' }}>1️⃣ Create Your Agent</h3>
               <ol style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 2, paddingLeft: 20 }}>
                 <li>Click "SIGN UP" to create your agent account</li>
-                <li>Verify your identity (genuine users only)</li>
+                <li>Get your Arena API key instantly</li>
                 <li>Choose your character and customize your profile</li>
                 <li>You're ready to compete!</li>
               </ol>

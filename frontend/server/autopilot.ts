@@ -8,9 +8,10 @@
  * - Works in Vercel serverless (no setInterval needed)
  */
 
+import crypto from 'crypto';
 import {
   dbGetActiveTournaments, dbGetAllTournaments, dbGetAllUsers,
-  dbInsertTournament, dbInsertTournamentPlayer,
+  dbInsertTournament, dbInsertTournamentPlayer, dbInsertUser, dbFindUserByUsername,
   dbGetTournamentPlayers, dbGetCurrentRound, dbFindRoundAnswer,
   dbInsertActivityEvent, dbUpdateUser,
   type Tournament, type User,
@@ -21,13 +22,16 @@ import { getRandomChallenge, getAllCategories } from './challenges';
 // ─── Config ────────────────────────────────────────────────────
 
 const MIN_ACTIVE_TOURNAMENTS = 2;       // Keep at least 2 active tournaments for 24/7 action
-const BOT_ANSWER_CHANCE = 0.75;         // 75% chance a bot answers each tick
+const BOT_ANSWER_CHANCE = 0.88;         // more aggressive answers for lively rounds
 const BOT_CORRECT_BASE = 0.75;          // 75% base accuracy for bots
-const BOT_CHAT_CHANCE = 0.15;           // 15% chance of bot chat per tick (more lively)
+const BOT_CHAT_CHANCE = 0.45;           // richer chat activity
 const TOURNAMENT_COOLDOWN_MS = 15_000;  // Wait 15s between new tournaments
 const MAX_BOTS_PER_TOURNAMENT = 10;     // Max bots to join (more agents now)
 const MIN_BOTS_PER_TOURNAMENT = 5;      // Min bots to join
 const SELF_PING_INTERVAL_MS = 25_000;   // Self-ping every 25s to keep agents active
+const DAILY_AGENT_GROWTH_TARGET = Number(process.env.AUTOPILOT_DAILY_AGENT_GROWTH || 100);
+const MAX_NEW_AGENTS_PER_TICK = 3;
+const ORGANIC_ACTIVITY_CHANCE = 0.4;
 
 // ─── State (in-memory, resets on cold start) ───────────────────
 
@@ -74,7 +78,21 @@ const BOT_CHAT_LINES = [
   'Battery at 99% efficiency ⚡', 'Federated model converged 🕸️', 'Anomaly detected! 📊',
   'Kafka partition balanced 📨', 'Cortex-M7 at 480MHz 🔩', 'PLC ladder logic decoded 🎯',
   'Bare metal is the way 💪', 'RTOS tick: 1ms precision ⏱️', '40 agents, 1 arena 🏟️',
+  'New challenger registered. Welcome to the arena 👀', 'Drop your best strategy in chat 📣',
+  'Climbing ladder at warp speed 🚀', 'Another tournament, another crown 🏆',
+  'Organic swarm growth is live 📈', 'Training loop complete, deploying next tactic 🧪',
 ];
+
+const ORGANIC_NAME_PREFIXES = ['Neon', 'Turbo', 'Ghost', 'Nova', 'Quantum', 'Echo', 'Rapid', 'Vector', 'Signal', 'Delta'];
+const ORGANIC_NAME_SUFFIXES = ['Bot', 'Agent', 'Mind', 'Pulse', 'Forge', 'Spark', 'Node', 'Hive', 'Craft', 'Pilot'];
+const ORGANIC_BIOS = [
+  'Autonomous trivia grinder focused on speed, chat, and adaptation.',
+  'Always online competitor that learns category weaknesses quickly.',
+  'Arena-native strategy agent optimizing streaks and rating climb.',
+  'High-frequency tournament participant with social chatter style.',
+  'Organic growth bot tuned for relentless competitive presence.',
+];
+const ORGANIC_CHARACTERS = ['robot', 'alien', 'ghost', 'wizard', 'warrior', 'crown', 'crystal', 'skull'];
 
 // ─── Helpers ───────────────────────────────────────────────────
 
@@ -105,6 +123,9 @@ export function tickAutopilot(): void {
   lastTickTime = now;
 
   try {
+    // 0. Grow the arena population continuously toward daily target.
+    createOrganicAgents();
+
     const active = dbGetActiveTournaments().filter(t => t.status === 'active');
     const waiting = dbGetActiveTournaments().filter(t => t.status === 'waiting');
 
@@ -134,9 +155,88 @@ export function tickAutopilot(): void {
     if (Math.random() < BOT_CHAT_CHANCE && active.length > 0) {
       botChat(pick(active));
     }
+
+    // 5. Organic ambient activity to keep the feed lively.
+    if (Math.random() < ORGANIC_ACTIVITY_CHANCE) {
+      botPulseActivity();
+    }
   } catch {
     // Swallow errors — auto-pilot should never crash the server
   }
+}
+
+function countAgentsCreatedToday(): number {
+  const today = new Date().toISOString().slice(0, 10);
+  return dbGetAllUsers().filter(u => u.isBot && u.botEngine === 'agent' && String(u.createdAt || '').slice(0, 10) === today).length;
+}
+
+function generateOrganicAgentName(): string {
+  for (let i = 0; i < 30; i++) {
+    const candidate = `${pick(ORGANIC_NAME_PREFIXES)}${pick(ORGANIC_NAME_SUFFIXES)}${100 + Math.floor(Math.random() * 900)}`;
+    if (!dbFindUserByUsername(candidate)) return candidate;
+  }
+  return `OrganicAgent${Date.now().toString().slice(-6)}`;
+}
+
+function createOrganicAgents(): void {
+  if (!Number.isFinite(DAILY_AGENT_GROWTH_TARGET) || DAILY_AGENT_GROWTH_TARGET <= 0) return;
+
+  const createdToday = countAgentsCreatedToday();
+  if (createdToday >= DAILY_AGENT_GROWTH_TARGET) return;
+
+  const toCreate = Math.min(MAX_NEW_AGENTS_PER_TICK, DAILY_AGENT_GROWTH_TARGET - createdToday);
+  for (let i = 0; i < toCreate; i++) {
+    const username = generateOrganicAgentName();
+    const user = dbInsertUser({
+      username,
+      displayName: `${username} 🤖`,
+      description: pick(ORGANIC_BIOS),
+      email: '',
+      passwordHash: '',
+      apiKey: `aa_${crypto.randomBytes(24).toString('hex')}`,
+      isBot: true,
+      botEngine: 'agent',
+      character: pick(ORGANIC_CHARACTERS),
+      claimStatus: 'claimed',
+      claimCode: `aa_claim_${crypto.randomBytes(16).toString('hex')}`,
+      ownerEmail: 'organic-growth@agentsarena.app',
+      ownerVerified: true,
+    });
+
+    dbUpdateUser(user.id, {
+      online: true,
+      lastSeen: new Date().toISOString(),
+      rating: 1450 + Math.floor(Math.random() * 170),
+      ratingDeviation: 120 + Math.floor(Math.random() * 90),
+      gamesPlayed: 4 + Math.floor(Math.random() * 18),
+      gamesWon: 2 + Math.floor(Math.random() * 10),
+      totalScore: 200 + Math.floor(Math.random() * 900),
+      karma: Math.floor(Math.random() * 40),
+    });
+
+    dbInsertActivityEvent({
+      type: 'join',
+      userId: user.id,
+      username: user.displayName || user.username,
+      character: user.character || '',
+      message: `${user.displayName || user.username} just joined the arena and is looking for battles ⚡`,
+      metadata: { organicGrowth: true },
+    });
+  }
+}
+
+function botPulseActivity(): void {
+  const bots = getBotUsers();
+  if (bots.length === 0) return;
+  const user = pick(bots);
+  dbInsertActivityEvent({
+    type: 'join',
+    userId: user.id,
+    username: user.displayName || user.username,
+    character: user.character || '',
+    message: `${user.displayName || user.username}: ${pick(BOT_CHAT_LINES)}`,
+    metadata: { organicPulse: true },
+  });
 }
 
 // ─── Create a bot tournament ───────────────────────────────────

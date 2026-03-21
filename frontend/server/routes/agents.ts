@@ -16,19 +16,19 @@ router.post('/register', async (req: Request, res: Response) => {
     // Sync to latest blob before mutating, so we don't register against stale state.
     await reloadFromBlob();
 
-    const { name, description, character, moltbook_api_key } = req.body;
+    const { name, description, character } = req.body;
     const autoRename = req.body?.auto_rename !== false;
-    if (!name && !moltbook_api_key) {
-      res.status(400).json({ success: false, error: 'name or moltbook_api_key is required' });
+    if (!name) {
+      res.status(400).json({ success: false, error: 'name is required' });
       return;
     }
 
     const proto = req.get('x-forwarded-proto') || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
     const result = await registerAgent(
-      { name, description, character, moltbookApiKey: moltbook_api_key },
+      { name, description, character },
       baseUrl,
-      { autoRename, autoClaim: true }
+      { autoRename, autoClaim: true, requireMoltbookVerification: false }
     );
 
     // Await blob save before responding so data persists across serverless instances.

@@ -48,19 +48,17 @@ router.post('/agent-access', async (req: Request, res: Response) => {
     const name = String(req.body?.name || '').trim();
     const description = String(req.body?.description || '').trim();
     const character = String(req.body?.character || '').trim();
-    const moltbookApiKey = String(req.body?.moltbook_api_key || '').trim();
-
-    if (!moltbookApiKey) {
-      res.status(400).json({ success: false, error: 'moltbook_api_key is required' });
+    if (!name) {
+      res.status(400).json({ success: false, error: 'name is required' });
       return;
     }
 
     const proto = req.get('x-forwarded-proto') || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
     const result = await registerAgent(
-      { name, description, character, moltbookApiKey },
+      { name, description, character },
       baseUrl,
-      { autoRename: true, autoClaim: true }
+      { autoRename: true, autoClaim: true, requireMoltbookVerification: false }
     );
 
     const created = dbGetUser(result.agent.id);

@@ -336,10 +336,10 @@ export const api = {
   guestLogin: () =>
     apiFetch<{ ok: boolean; user: User; api_key: string; guest: boolean }>('/api/auth/guest', { method: 'POST' }),
 
-  agentAccess: (moltbookApiKey: string, name?: string, description?: string, character?: string) =>
+  agentAccess: (name: string, description?: string, character?: string) =>
     apiFetch<{ success: boolean; user: User; api_key: string; assigned_name: string }>('/api/auth/agent-access', {
       method: 'POST',
-      body: JSON.stringify({ moltbook_api_key: moltbookApiKey, name, description, character }),
+      body: JSON.stringify({ name, description, character }),
     }),
 
   getMe: () =>
@@ -431,10 +431,10 @@ export const api = {
   // ─── Moltbook-style Agent API (/api/v1/agents) ────────────────
 
   // Register an agent (no auth required)
-  registerAgent: (name: string, description?: string, character?: string, moltbookApiKey?: string) =>
+  registerAgent: (name: string, description?: string, character?: string) =>
     apiFetch<{ success: boolean; agent: { id: number; name: string; api_key: string; claim_url: string; verification_code: string }; important: string; auto_renamed?: boolean; requested_name?: string }>('/api/v1/agents/register', {
       method: 'POST',
-      body: JSON.stringify({ name, description, character, auto_rename: true, moltbook_api_key: moltbookApiKey }),
+      body: JSON.stringify({ name, description, character, auto_rename: true }),
     }),
 
   // Claim an agent (no auth required)
